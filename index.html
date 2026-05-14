@@ -132,6 +132,9 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0}
 
 /* PENDING indicator */
 .pending-note{font-size:12px;color:var(--purple);font-style:italic;margin-bottom:8px}
+.name-field{min-height:40px;line-height:20px;cursor:text;outline:none;word-break:break-word}
+.name-field:empty::before{content:attr(data-ph);color:var(--muted);pointer-events:none}
+.name-field:focus{border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -819,10 +822,11 @@ async function saveNames(){
   if(!state.bracket) return;
   state.bracket.rounds.forEach(round=>{
     round.battles.forEach(b=>{
-      const d1=document.getElementById(`n_${b.id}_1`);
-      const d2=document.getElementById(`n_${b.id}_2`);
-      if(d1&&d1.value.trim()) b.dj1=d1.value.trim();
-      if(d2&&d2.value.trim()) b.dj2=d2.value.trim();
+      const d1=document.getElementById('n_'+b.id+'_1');
+      const d2=document.getElementById('n_'+b.id+'_2');
+      // support both input.value and contenteditable.textContent
+      if(d1){const v=(d1.value!==undefined?d1.value:d1.textContent).trim();if(v) b.dj1=v;}
+      if(d2){const v=(d2.value!==undefined?d2.value:d2.textContent).trim();if(v) b.dj2=v;}
     });
   });
   await save();
