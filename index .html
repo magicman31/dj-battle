@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salsa DJ Battle — Vote</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0c0a; --surface: #1a1714; --surface2: #252118;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #f0ece4; --muted: #8a8070;
+    --accent: #e8a020; --purple: #7c5cbf; --teal: #1d9e75; --red: #e24b4a;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
+  .header { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 0.04em; color: var(--accent); line-height: 1; }
+  .logo span { color: var(--text); }
+  .live-dot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--red); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+  .live-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.4s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+  .screen { display: none; padding: 20px; }
+  .screen.active { display: block; }
+  .section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .battle-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
+  .battle-card.live { border-color: var(--red); }
+  .battle-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .round-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .status-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .pill-live { background: rgba(226,75,74,0.15); color: var(--red); border: 1px solid rgba(226,75,74,0.3); }
+  .pill-closed { background: rgba(29,158,117,0.15); color: var(--teal); border: 1px solid rgba(29,158,117,0.3); }
+  .pill-waiting { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
+  .battle-djs { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .dj-name-home { flex: 1; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 0.04em; text-align: center; }
+  .vs-badge { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
+  .battle-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .winner-row { font-size: 12px; color: var(--teal); font-weight: 600; margin-bottom: 10px; }
+  .card-btns { display: flex; gap: 8px; }
+  .btn-primary { flex: 1; padding: 10px; background: var(--accent); color: #0e0c0a; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-ghost { flex: 1; padding: 10px; background: transparent; color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .btn-ghost:hover { background: var(--surface2); }
+  .back-btn { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 20px; }
+  .back-btn:hover { color: var(--text); }
+  .vote-round { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+  .vote-heading { font-family: 'Bebas Neue', cursive; font-size: 36px; letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 6px; }
+  .vote-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+  .vote-btn { width: 100%; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: border-color 0.2s, background 0.2s; font-family: 'DM Sans', sans-serif; color: var(--text); text-align: left; }
+  .vote-btn:hover { background: var(--surface2); }
+  .vote-btn.selected { border-color: var(--accent); background: rgba(232,160,32,0.08); }
+  .vote-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', cursive; font-size: 18px; color: var(--muted); flex-shrink: 0; transition: background 0.2s, color 0.2s; }
+  .vote-btn.selected .vote-avatar { background: var(--accent); color: #0e0c0a; border-color: var(--accent); }
+  .vote-dj-name { font-family: 'Bebas Neue', cursive; font-size: 24px; letter-spacing: 0.04em; }
+  .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: #0e0c0a; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.15s; }
+  .submit-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .submit-btn:hover:not(:disabled) { opacity: 0.88; }
+  .results-heading { font-family: 'Bebas Neue', cursive; font-size: 30px; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .results-meta { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .bar-row { margin-bottom: 14px; }
+  .bar-top { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .bar-dj { font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 0.04em; }
+  .bar-count { font-size: 13px; color: var(--muted); }
+  .bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+  .bar-a { background: var(--accent); } .bar-b { background: var(--purple); }
+  .winner-announce { background: rgba(29,158,117,0.1); border: 1px solid rgba(29,158,117,0.25); border-radius: var(--radius); padding: 14px 16px; margin-top: 16px; text-align: center; }
+  .winner-announce .label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 4px; }
+  .winner-announce .name { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 0.04em; }
+  .thanks-wrap { text-align: center; padding: 40px 0; }
+  .thanks-icon { font-size: 56px; margin-bottom: 16px; }
+  .thanks-heading { font-family: 'Bebas Neue', cursive; font-size: 36px; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .thanks-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+  .admin-card-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  input[type=text], input[type=password] { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; margin-bottom: 8px; outline: none; }
+  input[type=text]:focus, input[type=password]:focus { border-color: var(--accent); }
+  .battle-control-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .battle-control-row:last-child { border-bottom: none; }
+  .ctrl-name { font-size: 13px; font-weight: 500; }
+  .ctrl-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .ctrl-btns { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
+  .btn-sm { padding: 5px 12px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap; }
+  .btn-sm-open { background: var(--red); color: #fff; }
+  .btn-sm-close { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+  .btn-sm-win-a { background: var(--accent); color: #0e0c0a; }
+  .btn-sm-win-b { background: var(--purple); color: #fff; }
+  .setup-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .setup-row input { margin-bottom: 0; flex: 1; }
+  .setup-vs { font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+  .setup-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  .pin-wrap { display: flex; gap: 8px; }
+  .pin-wrap input { flex: 1; margin-bottom: 0; }
+  .danger-btn { width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(226,75,74,0.3); border-radius: var(--radius-sm); color: var(--red); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .danger-btn:hover { background: rgba(226,75,74,0.08); }
+  .empty-state { text-align: center; padding: 32px 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .status-bar { font-size: 11px; color: var(--muted); text-align: center; padding: 6px; }
+  .status-bar.err { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">Salsa <span>DJ Battle</span></div>
+    <div class="live-dot" id="live-indicator" style="display:none">Live</div>
+  </div>
+</div>
+
+<div id="screen-home" class="screen active">
+  <div class="section-title" style="margin-top:4px">Battles</div>
+  <div id="battle-list"></div>
+  <div id="status-bar" class="status-bar"></div>
+  <hr class="divider">
+  <button class="btn-ghost" style="width:100%" onclick="showAdmin()">⚙ Admin / MC panel</button>
+</div>
+
+<div id="screen-vote" class="screen">
+  <button class="back-btn" onclick="show('home')">← Back</button>
+  <div class="vote-round" id="vote-round"></div>
+  <div class="vote-heading" id="vote-heading"></div>
+  <div class="vote-sub">Who brought the heat? Tap your pick.</div>
+  <div id="vote-options"></div>
+  <button class="submit-btn" id="vote-submit" disabled onclick="submitVote()">Submit vote</button>
+</div>
+
+<div id="screen-voted" class="screen">
+  <div class="thanks-wrap">
+    <div class="thanks-icon">🎉</div>
+    <div class="thanks-heading">Vote cast!</div>
+    <div class="thanks-sub" id="thanks-msg"></div>
+    <button class="submit-btn" style="margin-top:28px" onclick="show('home')">Back to battles</button>
+  </div>
+</div>
+
+<div id="screen-results" class="screen">
+  <button class="back-btn" onclick="show('home')">← Back</button>
+  <div class="vote-round" id="res-round"></div>
+  <div class="results-heading" id="res-heading"></div>
+  <div class="results-meta" id="res-meta"></div>
+  <div id="res-bars"></div>
+</div>
+
+<div id="screen-admin" class="screen">
+  <button class="back-btn" onclick="show('home')">← Back</button>
+  <div style="font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:0.04em;margin-bottom:16px">MC Panel</div>
+  <div id="admin-gate">
+    <div class="admin-card">
+      <div class="admin-card-title">Enter admin PIN</div>
+      <input type="password" id="pin-input" placeholder="PIN" maxlength="6" style="width:160px">
+      <button class="btn-primary" style="width:160px" onclick="checkPin()">Unlock</button>
+      <div id="pin-err" style="color:var(--red);font-size:13px;margin-top:6px;display:none">Wrong PIN</div>
+    </div>
+  </div>
+  <div id="admin-body" style="display:none">
+    <div class="admin-card">
+      <div class="admin-card-title">Setup — DJ names</div>
+      <div id="battle-setup-rows"></div>
+      <button class="btn-primary" onclick="saveBattles()">Save &amp; publish</button>
+    </div>
+    <div class="admin-card">
+      <div class="admin-card-title">Battle control</div>
+      <div id="battle-ctrl-rows"></div>
+    </div>
+    <div class="admin-card">
+      <div class="admin-card-title">Change PIN</div>
+      <div class="pin-wrap">
+        <input type="text" id="new-pin" placeholder="New PIN" maxlength="6">
+        <button class="btn-ghost" style="flex-shrink:0;padding:10px 16px" onclick="changePin()">Save</button>
+      </div>
+    </div>
+    <button class="danger-btn" onclick="resetAll()">Reset all data &amp; votes</button>
+  </div>
+</div>
+
+<script>
+// ── Firebase REST API config ──────────────────────────────────────────────
+const DB_URL = 'https://dj-battle-18905-default-rtdb.asia-southeast1.firebasedatabase.app';
+const PATH   = '/salsaBattle';
+
+async function fbGet() {
+  const r = await fetch(`${DB_URL}${PATH}.json`);
+  if (!r.ok) throw new Error('GET failed: ' + r.status);
+  return r.json();
+}
+async function fbSet(data) {
+  const r = await fetch(`${DB_URL}${PATH}.json`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error('PUT failed: ' + r.status);
+  return r.json();
+}
+async function fbPatch(data) {
+  const r = await fetch(`${DB_URL}${PATH}.json`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error('PATCH failed: ' + r.status);
+  return r.json();
+}
+
+// ── Default state ─────────────────────────────────────────────────────────
+const DEFAULT_STATE = {
+  pin: '1234',
+  battles: [
+    {id:'b1',round:'Quarter-final',label:'Battle 1',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
+    {id:'b2',round:'Quarter-final',label:'Battle 2',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
+    {id:'b3',round:'Semi-final',  label:'Semi-final 1',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
+    {id:'b4',round:'Semi-final',  label:'Semi-final 2',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
+    {id:'b5',round:'Final',       label:'Grand Final',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
+  ]
+};
+
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let currentBattle = null, selectedDJ = null, adminUnlocked = false;
+let pollTimer = null;
+
+// ── Voter ID ──────────────────────────────────────────────────────────────
+function getVoterKey() {
+  let k = localStorage.getItem('salsaVoterID');
+  if (!k) { k = 'v_' + Math.random().toString(36).slice(2); localStorage.setItem('salsaVoterID', k); }
+  return k;
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────
+function setStatus(msg, isErr) {
+  const el = document.getElementById('status-bar');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'status-bar' + (isErr ? ' err' : '');
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────
+async function save() {
+  try { await fbSet(state); } catch(e) { setStatus('⚠ Save failed: ' + e.message, true); }
+}
+
+// ── Poll for live updates every 4 seconds ────────────────────────────────
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    try {
+      const d = await fbGet();
+      if (d && d.battles) {
+        state = d;
+        const active = document.querySelector('.screen.active');
+        if (!active) return;
+        if (active.id === 'screen-home') renderHome();
+        if (active.id === 'screen-results' && currentBattle) {
+          const updated = state.battles.find(x => x.id === currentBattle.id);
+          if (updated) { currentBattle = updated; renderResultsScreen(updated); }
+        }
+        if (active.id === 'screen-admin' && adminUnlocked) renderAdminBody();
+      }
+    } catch(e) { /* silent poll fail */ }
+  }, 4000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+async function init() {
+  setStatus('Connecting…');
+  try {
+    const d = await fbGet();
+    if (d && d.battles) {
+      state = d;
+      setStatus('');
+    } else {
+      // First run — write defaults
+      await fbSet(DEFAULT_STATE);
+      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      setStatus('');
+    }
+  } catch(e) {
+    setStatus('⚠ Cannot reach database. Check connection.', true);
+  }
+  renderHome();
+  startPolling();
+}
+
+// ── Screen navigation ─────────────────────────────────────────────────────
+function show(s) {
+  document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+  document.getElementById('screen-' + s).classList.add('active');
+  if (s === 'home') renderHome();
+  if (s === 'admin' && adminUnlocked) renderAdminBody();
+}
+
+// ── Home screen ───────────────────────────────────────────────────────────
+function renderHome() {
+  const el = document.getElementById('battle-list');
+  el.innerHTML = '';
+  const hasLive = state.battles.some(b => b.status === 'live');
+  document.getElementById('live-indicator').style.display = hasLive ? 'flex' : 'none';
+  const visible = state.battles.filter(b => b.dj1 || b.dj2);
+  if (!visible.length) {
+    el.innerHTML = '<div class="empty-state">No battles published yet.<br>Check back soon!</div>';
+    return;
+  }
+  visible.forEach(b => {
+    const votes = b.votes || {};
+    const total = Object.keys(votes).length;
+    const voted = votes[getVoterKey()];
+    const pill = b.status === 'live'   ? '<span class="status-pill pill-live">Live</span>'
+               : b.status === 'closed' ? '<span class="status-pill pill-closed">Closed</span>'
+               :                         '<span class="status-pill pill-waiting">Soon</span>';
+    const winnerRow = b.winner ? `<div class="winner-row">🏆 Winner: ${b.winner}</div>` : '';
+    const canVote    = b.status === 'live' && !voted;
+    const canResults = total > 0 || b.status === 'closed';
+    const div = document.createElement('div');
+    div.className = 'battle-card' + (b.status === 'live' ? ' live' : '');
+    div.innerHTML = `
+      <div class="battle-card-top"><span class="round-tag">${b.round} · ${b.label}</span>${pill}</div>
+      <div class="battle-djs">
+        <div class="dj-name-home">${b.dj1 || '?'}</div>
+        <div class="vs-badge">VS</div>
+        <div class="dj-name-home">${b.dj2 || '?'}</div>
+      </div>
+      <div class="battle-meta">${total} vote${total !== 1 ? 's' : ''}${voted ? ' · You voted: ' + voted : ''}</div>
+      ${winnerRow}
+      <div class="card-btns">
+        ${canVote    ? `<button class="btn-primary" onclick="openVote('${b.id}')">Vote now</button>` : ''}
+        ${canResults ? `<button class="btn-ghost"   onclick="openResults('${b.id}')">Results</button>` : ''}
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+// ── Vote screen ───────────────────────────────────────────────────────────
+function openVote(id) {
+  const b = state.battles.find(x => x.id === id);
+  if (!b || b.status !== 'live') return;
+  if ((b.votes || {})[getVoterKey()]) { alert('You already voted in this battle!'); return; }
+  currentBattle = b; selectedDJ = null;
+  document.getElementById('vote-round').textContent   = b.round + ' · ' + b.label;
+  document.getElementById('vote-heading').textContent = b.dj1 + ' vs ' + b.dj2;
+  const opts = document.getElementById('vote-options');
+  opts.innerHTML = '';
+  [b.dj1, b.dj2].forEach(dj => {
+    const btn = document.createElement('button');
+    btn.className = 'vote-btn';
+    btn.innerHTML = `<div class="vote-avatar">${initials(dj)}</div><div class="vote-dj-name">${dj}</div>`;
+    btn.onclick = () => {
+      document.querySelectorAll('.vote-btn').forEach(x => x.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedDJ = dj;
+      document.getElementById('vote-submit').disabled = false;
+    };
+    opts.appendChild(btn);
+  });
+  document.getElementById('vote-submit').disabled = true;
+  show('vote');
+}
+
+async function submitVote() {
+  if (!selectedDJ || !currentBattle) return;
+  const key = getVoterKey();
+  const submitBtn = document.getElementById('vote-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+  try {
+    // Re-fetch to get latest votes before writing
+    const fresh = await fbGet();
+    if (!fresh || !fresh.battles) throw new Error('No data');
+    const idx = fresh.battles.findIndex(x => x.id === currentBattle.id);
+    if (idx === -1) throw new Error('Battle not found');
+    if (!fresh.battles[idx].votes) fresh.battles[idx].votes = {};
+    if (fresh.battles[idx].votes[key]) { alert('Already voted!'); show('home'); return; }
+    fresh.battles[idx].votes[key] = selectedDJ;
+    await fbSet(fresh);
+    state = fresh;
+    document.getElementById('thanks-msg').textContent = 'You voted for ' + selectedDJ + '. Results update live.';
+    show('voted');
+  } catch(e) {
+    alert('Vote failed: ' + e.message + '. Please try again.');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit vote';
+  }
+}
+
+// ── Results screen ────────────────────────────────────────────────────────
+function openResults(id) {
+  const b = state.battles.find(x => x.id === id);
+  if (!b) return;
+  currentBattle = b;
+  renderResultsScreen(b);
+  show('results');
+}
+
+function renderResultsScreen(b) {
+  const votes = b.votes || {};
+  const total = Object.keys(votes).length;
+  const v1 = Object.values(votes).filter(x => x === b.dj1).length;
+  const v2 = Object.values(votes).filter(x => x === b.dj2).length;
+  const p1 = total ? Math.round(v1 / total * 100) : 0;
+  const p2 = total ? Math.round(v2 / total * 100) : 0;
+  document.getElementById('res-round').textContent   = b.round + ' · ' + b.label;
+  document.getElementById('res-heading').textContent = b.dj1 + ' vs ' + b.dj2;
+  document.getElementById('res-meta').textContent    = total + ' total vote' + (total !== 1 ? 's' : '');
+  const winnerBlock = b.winner
+    ? `<div class="winner-announce"><div class="label">Winner</div><div class="name">${b.winner}</div></div>` : '';
+  document.getElementById('res-bars').innerHTML = `
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-dj">${b.dj1}</span><span class="bar-count">${v1} (${p1}%)</span></div>
+      <div class="bar-track"><div class="bar-fill bar-a" style="width:${p1}%"></div></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-dj">${b.dj2}</span><span class="bar-count">${v2} (${p2}%)</span></div>
+      <div class="bar-track"><div class="bar-fill bar-b" style="width:${p2}%"></div></div>
+    </div>
+    ${winnerBlock}`;
+}
+
+// ── Admin ─────────────────────────────────────────────────────────────────
+function showAdmin() {
+  adminUnlocked = false;
+  document.getElementById('admin-gate').style.display  = 'block';
+  document.getElementById('admin-body').style.display  = 'none';
+  document.getElementById('pin-err').style.display     = 'none';
+  document.getElementById('pin-input').value           = '';
+  show('admin');
+}
+
+function checkPin() {
+  const v = document.getElementById('pin-input').value.trim();
+  if (v === String(state.pin)) {
+    adminUnlocked = true;
+    document.getElementById('admin-gate').style.display = 'none';
+    document.getElementById('admin-body').style.display = 'block';
+    renderAdminBody();
+  } else {
+    document.getElementById('pin-err').style.display = 'block';
+    // Debug helper — remove before event night
+    console.log('Entered:', v, '| Expected:', state.pin);
+  }
+}
+
+function renderAdminBody() {
+  const setup = document.getElementById('battle-setup-rows');
+  setup.innerHTML = '';
+  state.battles.forEach(b => {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '14px';
+    wrap.innerHTML = `<div class="setup-label">${b.label}</div>
+      <div class="setup-row">
+        <input type="text" placeholder="DJ A name" value="${b.dj1}" id="s_${b.id}_1">
+        <span class="setup-vs">VS</span>
+        <input type="text" placeholder="DJ B name" value="${b.dj2}" id="s_${b.id}_2">
+      </div>`;
+    setup.appendChild(wrap);
+  });
+
+  const ctrl = document.getElementById('battle-ctrl-rows');
+  ctrl.innerHTML = '';
+  state.battles.forEach(b => {
+    if (!b.dj1 && !b.dj2) return;
+    const total = Object.keys(b.votes || {}).length;
+    const row = document.createElement('div');
+    row.className = 'battle-control-row';
+    const winnerBtns = b.status === 'closed' && !b.winner
+      ? `<button class="btn-sm btn-sm-win-a" onclick="declareWinner('${b.id}','${b.dj1}')">→ ${b.dj1}</button>
+         <button class="btn-sm btn-sm-win-b" onclick="declareWinner('${b.id}','${b.dj2}')">→ ${b.dj2}</button>` : '';
+    row.innerHTML = `
+      <div>
+        <div class="ctrl-name">${b.dj1 || '?'} vs ${b.dj2 || '?'}</div>
+        <div class="ctrl-meta">${b.label} · ${total} votes${b.winner ? ' · 🏆 ' + b.winner : ''}</div>
+      </div>
+      <div class="ctrl-btns">
+        ${b.status === 'waiting' ? `<button class="btn-sm btn-sm-open"  onclick="openBattle('${b.id}')">Open voting</button>` : ''}
+        ${b.status === 'live'    ? `<button class="btn-sm btn-sm-close" onclick="closeBattle('${b.id}')">Close voting</button>` : ''}
+        ${winnerBtns}
+      </div>`;
+    ctrl.appendChild(row);
+  });
+}
+
+async function saveBattles() {
+  state.battles.forEach(b => {
+    const d1 = document.getElementById(`s_${b.id}_1`);
+    const d2 = document.getElementById(`s_${b.id}_2`);
+    if (d1) b.dj1 = d1.value.trim();
+    if (d2) b.dj2 = d2.value.trim();
+  });
+  await save();
+  alert('Battles saved and published!');
+  renderAdminBody();
+}
+
+async function openBattle(id) {
+  const b = state.battles.find(x => x.id === id);
+  if (b) { b.status = 'live'; await save(); renderAdminBody(); renderHome(); }
+}
+
+async function closeBattle(id) {
+  const b = state.battles.find(x => x.id === id);
+  if (b) { b.status = 'closed'; await save(); renderAdminBody(); }
+}
+
+async function declareWinner(id, dj) {
+  const b = state.battles.find(x => x.id === id);
+  if (b) { b.winner = dj; await save(); renderAdminBody(); }
+}
+
+async function changePin() {
+  const v = document.getElementById('new-pin').value.trim();
+  if (v.length < 4) { alert('PIN must be at least 4 characters'); return; }
+  state.pin = v; await save(); alert('PIN updated to: ' + v);
+}
+
+async function resetAll() {
+  if (!confirm('Reset ALL battles and votes? This cannot be undone.')) return;
+  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+  await save();
+  adminUnlocked = false;
+  show('home');
+}
+
+function initials(name) {
+  return (name || '').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || 'DJ';
+}
+
+// ── Start ─────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
