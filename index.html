@@ -133,6 +133,20 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0}
 /* PENDING indicator */
 .pending-note{font-size:12px;color:var(--purple);font-style:italic;margin-bottom:8px}
 .inline-vote-panel{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* Tap-to-select DJ name buttons */
+.dj-select-row{display:flex;align-items:center;gap:8px;margin:10px 0 6px}
+.dj-select-btn{flex:1;padding:12px 8px;background:var(--surface2);border:2px solid var(--border2);border-radius:var(--rs);cursor:pointer;text-align:center;transition:all .15s;min-width:0}
+.dj-select-btn:disabled{cursor:default}
+.dj-select-btn .dj-select-name{font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:.04em;color:var(--text);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dj-select-btn.dj-picked{border-color:var(--accent);background:rgba(232,160,32,.12)}
+.dj-select-btn.dj-picked .dj-select-name{color:var(--accent)}
+.dj-select-btn.dj-myvote{border-color:var(--purple);background:rgba(124,92,191,.1)}
+.dj-select-btn.dj-myvote .dj-select-name{color:var(--purple)}
+.dj-select-btn.dj-winner{border-color:var(--teal);background:rgba(29,158,117,.1)}
+.dj-select-btn.dj-winner .dj-select-name{color:var(--teal)}
+.dj-win-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--teal);margin-left:6px;vertical-align:middle;box-shadow:0 0 6px var(--teal)}
+.dj-select-vs{flex-shrink:0}
 .name-field{min-height:40px;line-height:20px;cursor:text;outline:none;word-break:break-word}
 .name-field:empty::before{content:attr(data-ph);color:var(--muted);pointer-events:none}
 .name-field:focus{border-color:var(--accent)}
@@ -433,94 +447,104 @@ function buildBattleCard(b){
   const total=Object.keys(votes).length;
   const voted=votes[getVoterKey()];
   const canVote=b.status==='live'&&!voted;
-  // Results only visible after battle closes — no live tallies during voting
   const canRes=b.status==='closed';
-  const isExpanded=expandedVote===b.id;
+  const isLive=b.status==='live';
+  const myPick=currentBattle&&currentBattle.id===b.id?selectedDJ:null;
 
-  const pill=b.status==='live'?'<span class="pill pill-live">Live</span>'
+  const pill=isLive?'<span class="pill pill-live">Live</span>'
             :b.status==='closed'?'<span class="pill pill-closed">Closed</span>'
             :'<span class="pill pill-wait">Soon</span>';
-  const winRow=b.winner?`<div class="winner-row">🏆 Winner: ${b.winner}</div>`:'';
 
-  // Hide tally while live — reveal only after closed
   let metaLine='';
-  if(b.status==='live') metaLine=voted?'You voted — results revealed when voting closes.':'Voting is open!';
+  if(isLive) metaLine=voted?'You voted — results revealed when voting closes.':'Tap a name to vote';
   else if(b.status==='closed') metaLine=total+' vote'+(total!==1?'s':'')+' cast';
 
   const div=document.createElement('div');
-  div.className='card'+(b.status==='live'?' live':'');
+  div.className='card'+(isLive?' live':'');
   div.id='card-'+b.id;
 
-  // Header
-  div.innerHTML=`
-    <div class="card-top"><span class="rtag">${b.label}</span>${pill}</div>
-    <div class="djs">
-      <div class="djn">${b.dj1||'?'}</div>
-      <div class="vsbadge">VS</div>
-      <div class="djn">${b.dj2||'?'}</div>
-    </div>
-    <div class="meta">${metaLine}</div>
-    ${winRow}`;
+  // Top row
+  const top=document.createElement('div');
+  top.className='card-top';
+  top.innerHTML=`<span class="rtag">${b.label}</span>${pill}`;
+  div.appendChild(top);
 
-  // Inline vote panel
-  if(canVote && isExpanded){
-    const panel=document.createElement('div');
-    panel.className='inline-vote-panel';
-    panel.innerHTML=`<div class="vote-sub" style="margin-bottom:12px">Who brought the heat?</div>`;
+  if(b.winner){
+    const wr=document.createElement('div');
+    wr.className='winner-row';
+    wr.innerHTML='🏆 Winner: '+b.winner;
+    div.appendChild(wr);
+  }
 
-    [b.dj1,b.dj2].forEach(dj=>{
-      const btn=document.createElement('button');
-      btn.className='vbtn'+(selectedDJ===dj&&currentBattle&&currentBattle.id===b.id?' sel':'');
-      btn.innerHTML=`<div class="avatar">${ini(dj)}</div><div class="vdjn">${dj}</div>`;
+  // DJ name buttons — always shown, selectable only when live and not voted
+  const djRow=document.createElement('div');
+  djRow.className='dj-select-row';
+
+  [b.dj1,b.dj2].forEach(dj=>{
+    const btn=document.createElement('button');
+    btn.className='dj-select-btn';
+
+    // States
+    const isWinner=b.winner===dj;
+    const isPicked=canVote&&myPick===dj;
+    const isMyVote=voted===dj;
+
+    if(isWinner)      btn.classList.add('dj-winner');
+    else if(isPicked) btn.classList.add('dj-picked');
+    else if(isMyVote) btn.classList.add('dj-myvote');
+
+    btn.disabled=!canVote;
+    btn.innerHTML=`<span class="dj-select-name">${dj}</span>`;
+    if(isWinner) btn.innerHTML+=`<span class="dj-win-dot"></span>`;
+
+    if(canVote){
       btn.onclick=()=>{
         currentBattle=b;
         selectedDJ=dj;
-        // Re-render just this card to show selection
         const old=document.getElementById('card-'+b.id);
         if(old) old.replaceWith(buildBattleCard(b));
       };
-      panel.appendChild(btn);
-    });
+    }
+    djRow.appendChild(btn);
+  });
 
-    const submitRow=document.createElement('div');
-    submitRow.className='row-btns';
-    submitRow.style.marginTop='10px';
-    const submitBtn=document.createElement('button');
-    submitBtn.className='btn btn-acc';
-    submitBtn.disabled=!(selectedDJ&&currentBattle&&currentBattle.id===b.id);
-    submitBtn.textContent='Submit vote';
-    submitBtn.onclick=()=>submitVote(b.id);
-    const cancelBtn=document.createElement('button');
-    cancelBtn.className='btn btn-ghost';
-    cancelBtn.textContent='Cancel';
-    cancelBtn.onclick=()=>{ expandedVote=null; selectedDJ=null; currentBattle=null; const old=document.getElementById('card-'+b.id); if(old) old.replaceWith(buildBattleCard(b)); };
-    submitRow.appendChild(submitBtn);
-    submitRow.appendChild(cancelBtn);
-    panel.appendChild(submitRow);
-    div.appendChild(panel);
-  } else {
-    // Normal action buttons
-    const row=document.createElement('div');
-    row.className='row-btns';
-    if(canVote){
-      const vb=document.createElement('button');
-      vb.className='btn btn-acc';
-      vb.textContent='Vote now';
-      vb.onclick=()=>{ expandedVote=b.id; selectedDJ=null; currentBattle=null; const old=document.getElementById('card-'+b.id); if(old) old.replaceWith(buildBattleCard(b)); };
-      row.appendChild(vb);
-    }
-    if(canRes){
-      const rb=document.createElement('button');
-      rb.className='btn btn-ghost';
-      rb.textContent='Results';
-      rb.onclick=()=>openResults(b.id);
-      row.appendChild(rb);
-    }
-    if(row.children.length) div.appendChild(row);
+  // VS label between
+  const vs=document.createElement('div');
+  vs.className='vsbadge dj-select-vs';
+  vs.textContent='VS';
+  djRow.insertBefore(vs, djRow.children[1]);
+  div.appendChild(djRow);
+
+  // Meta
+  const meta=document.createElement('div');
+  meta.className='meta';
+  meta.textContent=metaLine;
+  div.appendChild(meta);
+
+  // Vote Now button
+  if(canVote){
+    const voteBtn=document.createElement('button');
+    voteBtn.className='btn btn-acc btn-full';
+    voteBtn.textContent='Vote now';
+    voteBtn.disabled=!myPick;
+    voteBtn.style.marginTop='10px';
+    voteBtn.onclick=()=>submitVote(b.id);
+    div.appendChild(voteBtn);
+  }
+
+  // Results button
+  if(canRes){
+    const resBtn=document.createElement('button');
+    resBtn.className='btn btn-ghost btn-full';
+    resBtn.textContent='See results';
+    resBtn.style.marginTop='8px';
+    resBtn.onclick=()=>openResults(b.id);
+    div.appendChild(resBtn);
   }
 
   return div;
 }
+
 
 // ─── VOTE (inline) ────────────────────────────────────────────────────────
 async function submitVote(battleId){
@@ -904,18 +928,19 @@ function renderCtrlCard(){
     const total=Object.keys(b.votes||{}).length;
     const row=document.createElement('div');
     row.className='ctrl-row';
-    const winBtns=b.status==='closed'&&!b.winner
-      ?`<button class="btn-sm btn-sm-win-a" onclick="declareWinner('${b.id}','${b.dj1}')">→ ${b.dj1}</button>
-        <button class="btn-sm btn-sm-win-b" onclick="declareWinner('${b.id}','${b.dj2}')">→ ${b.dj2}</button>`:'';
     row.innerHTML=`
-      <div>
-        <div style="font-size:13px;font-weight:500">${b.dj1} vs ${b.dj2}</div>
-        <div style="font-size:12px;color:var(--muted)">${b.label} · ${total} votes${b.winner?' · 🏆 '+b.winner:''}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;margin-bottom:2px">${b.dj1} vs ${b.dj2}</div>
+        <div style="font-size:12px;color:var(--muted)">${b.label} · ${total} vote${total!==1?'s':''}${b.winner?' · 🏆 '+b.winner:''}</div>
       </div>
       <div class="ctrl-btns">
         ${b.status==='waiting'?`<button class="btn-sm btn-sm-open" onclick="openBattle('${b.id}')">Open voting</button>`:''}
         ${b.status==='live'?`<button class="btn-sm btn-sm-close" onclick="closeBattle('${b.id}')">Close voting</button>`:''}
-        ${winBtns}
+        ${b.status==='closed'&&!b.winner?`
+          <button class="btn-sm" style="background:var(--muted);color:#fff" onclick="openBattle('${b.id}')">Reopen</button>
+          <button class="btn-sm btn-sm-win-a" onclick="declareWinner('${b.id}','${b.dj1}')">→ ${b.dj1}</button>
+          <button class="btn-sm btn-sm-win-b" onclick="declareWinner('${b.id}','${b.dj2}')">→ ${b.dj2}</button>`:''}
+        ${b.winner?`<button class="btn-sm btn-sm-close" onclick="undoWinner('${b.id}')">Undo winner</button>`:''}
       </div>`;
     body.appendChild(row);
   });
@@ -935,7 +960,19 @@ async function declareWinner(id,dj){
     b.winner=dj;
     await save();
     renderBracketSVG();
-    renderNamesCard(); // unlock next round if ready
+    renderNamesCard();
+    renderCtrlCard();
+  }
+}
+
+async function undoWinner(id){
+  if(!confirm('Remove the declared winner for this battle?')) return;
+  const b=allBattles(state.bracket).find(x=>x.id===id);
+  if(b){
+    b.winner='';
+    await save();
+    renderBracketSVG();
+    renderNamesCard();
     renderCtrlCard();
   }
 }
