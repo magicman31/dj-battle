@@ -3,529 +3,904 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salsa DJ Battle — Vote</title>
+<title>Salsa DJ Battle</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0e0c0a; --surface: #1a1714; --surface2: #252118;
-    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
-    --text: #f0ece4; --muted: #8a8070;
-    --accent: #e8a020; --purple: #7c5cbf; --teal: #1d9e75; --red: #e24b4a;
-    --radius: 12px; --radius-sm: 8px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; max-width: 480px; margin: 0 auto; padding: 0 0 80px; }
-  .header { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
-  .header-top { display: flex; align-items: center; justify-content: space-between; }
-  .logo { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 0.04em; color: var(--accent); line-height: 1; }
-  .logo span { color: var(--text); }
-  .live-dot { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--red); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
-  .live-dot::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--red); animation: pulse 1.4s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
-  .screen { display: none; padding: 20px; }
-  .screen.active { display: block; }
-  .section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
-  .battle-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
-  .battle-card.live { border-color: var(--red); }
-  .battle-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .round-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-  .status-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
-  .pill-live { background: rgba(226,75,74,0.15); color: var(--red); border: 1px solid rgba(226,75,74,0.3); }
-  .pill-closed { background: rgba(29,158,117,0.15); color: var(--teal); border: 1px solid rgba(29,158,117,0.3); }
-  .pill-waiting { background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--border); }
-  .battle-djs { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .dj-name-home { flex: 1; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 0.04em; text-align: center; }
-  .vs-badge { font-size: 11px; font-weight: 700; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
-  .battle-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
-  .winner-row { font-size: 12px; color: var(--teal); font-weight: 600; margin-bottom: 10px; }
-  .card-btns { display: flex; gap: 8px; }
-  .btn-primary { flex: 1; padding: 10px; background: var(--accent); color: #0e0c0a; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
-  .btn-primary:hover { opacity: 0.88; }
-  .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
-  .btn-ghost { flex: 1; padding: 10px; background: transparent; color: var(--text); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
-  .btn-ghost:hover { background: var(--surface2); }
-  .back-btn { background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; padding: 0; margin-bottom: 20px; }
-  .back-btn:hover { color: var(--text); }
-  .vote-round { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
-  .vote-heading { font-family: 'Bebas Neue', cursive; font-size: 36px; letter-spacing: 0.04em; line-height: 1.1; margin-bottom: 6px; }
-  .vote-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
-  .vote-btn { width: 100%; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 14px; transition: border-color 0.2s, background 0.2s; font-family: 'DM Sans', sans-serif; color: var(--text); text-align: left; }
-  .vote-btn:hover { background: var(--surface2); }
-  .vote-btn.selected { border-color: var(--accent); background: rgba(232,160,32,0.08); }
-  .vote-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', cursive; font-size: 18px; color: var(--muted); flex-shrink: 0; transition: background 0.2s, color 0.2s; }
-  .vote-btn.selected .vote-avatar { background: var(--accent); color: #0e0c0a; border-color: var(--accent); }
-  .vote-dj-name { font-family: 'Bebas Neue', cursive; font-size: 24px; letter-spacing: 0.04em; }
-  .submit-btn { width: 100%; padding: 14px; background: var(--accent); color: #0e0c0a; border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity 0.15s; }
-  .submit-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-  .submit-btn:hover:not(:disabled) { opacity: 0.88; }
-  .results-heading { font-family: 'Bebas Neue', cursive; font-size: 30px; letter-spacing: 0.04em; margin-bottom: 4px; }
-  .results-meta { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-  .bar-row { margin-bottom: 14px; }
-  .bar-top { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
-  .bar-dj { font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 0.04em; }
-  .bar-count { font-size: 13px; color: var(--muted); }
-  .bar-track { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
-  .bar-a { background: var(--accent); } .bar-b { background: var(--purple); }
-  .winner-announce { background: rgba(29,158,117,0.1); border: 1px solid rgba(29,158,117,0.25); border-radius: var(--radius); padding: 14px 16px; margin-top: 16px; text-align: center; }
-  .winner-announce .label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--teal); margin-bottom: 4px; }
-  .winner-announce .name { font-family: 'Bebas Neue', cursive; font-size: 28px; letter-spacing: 0.04em; }
-  .thanks-wrap { text-align: center; padding: 40px 0; }
-  .thanks-icon { font-size: 56px; margin-bottom: 16px; }
-  .thanks-heading { font-family: 'Bebas Neue', cursive; font-size: 36px; letter-spacing: 0.04em; margin-bottom: 8px; }
-  .thanks-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
-  .admin-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
-  .admin-card-title { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
-  input[type=text], input[type=password] { width: 100%; padding: 10px 12px; background: var(--surface2); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; margin-bottom: 8px; outline: none; }
-  input[type=text]:focus, input[type=password]:focus { border-color: var(--accent); }
-  .battle-control-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
-  .battle-control-row:last-child { border-bottom: none; }
-  .ctrl-name { font-size: 13px; font-weight: 500; }
-  .ctrl-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .ctrl-btns { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
-  .btn-sm { padding: 5px 12px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; border: none; white-space: nowrap; }
-  .btn-sm-open { background: var(--red); color: #fff; }
-  .btn-sm-close { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
-  .btn-sm-win-a { background: var(--accent); color: #0e0c0a; }
-  .btn-sm-win-b { background: var(--purple); color: #fff; }
-  .setup-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-  .setup-row input { margin-bottom: 0; flex: 1; }
-  .setup-vs { font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
-  .setup-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-  .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-  .pin-wrap { display: flex; gap: 8px; }
-  .pin-wrap input { flex: 1; margin-bottom: 0; }
-  .danger-btn { width: 100%; padding: 12px; background: transparent; border: 1px solid rgba(226,75,74,0.3); border-radius: var(--radius-sm); color: var(--red); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
-  .danger-btn:hover { background: rgba(226,75,74,0.08); }
-  .empty-state { text-align: center; padding: 32px 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
-  .status-bar { font-size: 11px; color: var(--muted); text-align: center; padding: 6px; }
-  .status-bar.err { color: var(--red); }
+:root{
+  --bg:#0e0c0a;--surface:#1a1714;--surface2:#252118;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.18);
+  --text:#f0ece4;--muted:#8a8070;
+  --accent:#e8a020;--purple:#7c5cbf;--teal:#1d9e75;--red:#e24b4a;
+  --r:12px;--rs:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:480px;margin:0 auto;padding:0 0 80px}
+
+/* HEADER */
+.hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+.hdr-row{display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Bebas Neue',cursive;font-size:26px;letter-spacing:.04em;color:var(--accent);line-height:1}
+.logo span{color:var(--text)}
+.live-dot{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--red);font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.live-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+/* SCREENS */
+.screen{display:none;padding:20px}
+.screen.active{display:block}
+
+/* TYPE */
+.sec{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.pg-title{font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:.04em;margin-bottom:16px}
+.back{background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;padding:0;margin-bottom:18px;display:flex;align-items:center;gap:4px}
+.back:hover{color:var(--text)}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px}
+.card.live{border-color:var(--red)}
+.card.bye-card{border-style:dashed;border-color:var(--muted);opacity:.7}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.rtag{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+.pill-live{background:rgba(226,75,74,.15);color:var(--red);border:1px solid rgba(226,75,74,.3)}
+.pill-closed{background:rgba(29,158,117,.15);color:var(--teal);border:1px solid rgba(29,158,117,.3)}
+.pill-wait{background:rgba(255,255,255,.05);color:var(--muted);border:1px solid var(--border)}
+.pill-bye{background:rgba(124,92,191,.15);color:var(--purple);border:1px solid rgba(124,92,191,.3)}
+
+/* DJ NAME ROW */
+.djs{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.djn{flex:1;font-family:'Bebas Neue',cursive;font-size:22px;letter-spacing:.04em;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vsbadge{font-size:11px;font-weight:700;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;flex-shrink:0}
+.meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+.winner-row{font-size:12px;color:var(--teal);font-weight:600;margin-bottom:8px}
+
+/* BUTTONS */
+.row-btns{display:flex;gap:8px}
+.btn{flex:1;padding:10px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s}
+.btn-acc{background:var(--accent);color:#0e0c0a}
+.btn-acc:hover{opacity:.88}
+.btn-acc:disabled{opacity:.35;cursor:not-allowed}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--surface2)}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(226,75,74,.3)}
+.btn-danger:hover{background:rgba(226,75,74,.08)}
+.btn-full{width:100%;flex:none}
+.btn-sm{padding:5px 12px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border:none;white-space:nowrap}
+.btn-sm-open{background:var(--red);color:#fff}
+.btn-sm-close{background:var(--surface2);color:var(--text);border:1px solid var(--border2)}
+.btn-sm-win-a{background:var(--accent);color:#0e0c0a}
+.btn-sm-win-b{background:var(--purple);color:#fff}
+
+/* VOTE */
+.vote-round{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.vote-h{font-family:'Bebas Neue',cursive;font-size:34px;letter-spacing:.04em;line-height:1.1;margin-bottom:6px}
+.vote-sub{font-size:14px;color:var(--muted);margin-bottom:22px}
+.vbtn{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:14px;transition:border-color .2s,background .2s;font-family:'DM Sans',sans-serif;color:var(--text);text-align:left}
+.vbtn:hover{background:var(--surface2)}
+.vbtn.sel{border-color:var(--accent);background:rgba(232,160,32,.08)}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',cursive;font-size:18px;color:var(--muted);flex-shrink:0;transition:background .2s,color .2s}
+.vbtn.sel .avatar{background:var(--accent);color:#0e0c0a;border-color:var(--accent)}
+.vdjn{font-family:'Bebas Neue',cursive;font-size:24px;letter-spacing:.04em}
+
+/* RESULTS */
+.bar-row{margin-bottom:14px}
+.bar-top{display:flex;justify-content:space-between;font-size:14px;margin-bottom:5px}
+.bar-dj{font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:.04em}
+.bar-ct{font-size:13px;color:var(--muted)}
+.bar-track{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.bar-a{background:var(--accent)}.bar-b{background:var(--purple)}
+.win-box{background:rgba(29,158,117,.1);border:1px solid rgba(29,158,117,.25);border-radius:var(--r);padding:14px 16px;margin-top:16px;text-align:center}
+.win-box .wl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:4px}
+.win-box .wn{font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:.04em}
+
+/* THANKS */
+.thanks{text-align:center;padding:40px 0}
+.thanks .icon{font-size:56px;margin-bottom:16px}
+.thanks .th{font-family:'Bebas Neue',cursive;font-size:36px;letter-spacing:.04em;margin-bottom:8px}
+.thanks .ts{font-size:14px;color:var(--muted);line-height:1.6}
+
+/* ADMIN INPUTS — autocomplete off */
+.fi{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;margin-bottom:8px;outline:none}
+.fi:focus{border-color:var(--accent)}
+.setup-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.setup-row .fi{margin-bottom:0;flex:1}
+.setup-vs{font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0}
+.setup-lbl{font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+
+/* BRACKET SVG */
+.bracket-wrap{overflow-x:auto;margin-bottom:12px}
+svg.bracket{font-family:'DM Sans',sans-serif}
+
+/* CTRL ROW */
+.ctrl-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.ctrl-row:last-child{border-bottom:none}
+.ctrl-btns{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+
+/* DJ COUNT SELECTOR */
+.count-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.count-btn{padding:14px 8px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--rs);font-family:'Bebas Neue',cursive;font-size:22px;color:var(--muted);cursor:pointer;text-align:center;transition:all .15s}
+.count-btn:hover{border-color:var(--accent);color:var(--text)}
+.count-btn.active{background:rgba(232,160,32,.12);border-color:var(--accent);color:var(--accent)}
+
+/* DIVIDER */
+hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+/* STATUS */
+.status{font-size:11px;color:var(--muted);text-align:center;padding:6px}
+.status.err{color:var(--red)}
+
+/* PENDING indicator */
+.pending-note{font-size:12px;color:var(--purple);font-style:italic;margin-bottom:8px}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-top">
+<div class="hdr">
+  <div class="hdr-row">
     <div class="logo">Salsa <span>DJ Battle</span></div>
-    <div class="live-dot" id="live-indicator" style="display:none">Live</div>
+    <div class="live-dot" id="live-ind" style="display:none">Live</div>
   </div>
 </div>
 
-<div id="screen-home" class="screen active">
-  <div class="section-title" style="margin-top:4px">Battles</div>
-  <div id="battle-list"></div>
-  <div id="status-bar" class="status-bar"></div>
-  <hr class="divider">
-  <button class="btn-ghost" style="width:100%" onclick="showAdmin()">⚙ Admin / MC panel</button>
+<!-- HOME -->
+<div id="s-home" class="screen active">
+  <div class="sec" style="margin-top:4px">Battles</div>
+  <div id="home-list"></div>
+  <div id="home-status" class="status"></div>
+  <hr>
+  <button class="btn btn-ghost btn-full" onclick="goAdmin()">⚙ Admin / MC panel</button>
 </div>
 
-<div id="screen-vote" class="screen">
-  <button class="back-btn" onclick="show('home')">← Back</button>
-  <div class="vote-round" id="vote-round"></div>
-  <div class="vote-heading" id="vote-heading"></div>
+<!-- VOTE -->
+<div id="s-vote" class="screen">
+  <button class="back" onclick="show('home')">← Back</button>
+  <div class="vote-round" id="v-round"></div>
+  <div class="vote-h" id="v-heading"></div>
   <div class="vote-sub">Who brought the heat? Tap your pick.</div>
-  <div id="vote-options"></div>
-  <button class="submit-btn" id="vote-submit" disabled onclick="submitVote()">Submit vote</button>
+  <div id="v-opts"></div>
+  <button class="btn btn-acc btn-full" id="v-submit" disabled onclick="submitVote()">Submit vote</button>
 </div>
 
-<div id="screen-voted" class="screen">
-  <div class="thanks-wrap">
-    <div class="thanks-icon">🎉</div>
-    <div class="thanks-heading">Vote cast!</div>
-    <div class="thanks-sub" id="thanks-msg"></div>
-    <button class="submit-btn" style="margin-top:28px" onclick="show('home')">Back to battles</button>
+<!-- THANKS -->
+<div id="s-voted" class="screen">
+  <div class="thanks">
+    <div class="icon">🎉</div>
+    <div class="th">Vote cast!</div>
+    <div class="ts" id="thanks-msg"></div>
+    <button class="btn btn-acc btn-full" style="margin-top:28px" onclick="show('home')">Back to battles</button>
   </div>
 </div>
 
-<div id="screen-results" class="screen">
-  <button class="back-btn" onclick="show('home')">← Back</button>
-  <div class="vote-round" id="res-round"></div>
-  <div class="results-heading" id="res-heading"></div>
-  <div class="results-meta" id="res-meta"></div>
-  <div id="res-bars"></div>
+<!-- RESULTS -->
+<div id="s-results" class="screen">
+  <button class="back" onclick="show('home')">← Back</button>
+  <div class="vote-round" id="r-round"></div>
+  <div class="pg-title" id="r-heading" style="font-size:24px;margin-bottom:4px"></div>
+  <div class="status" id="r-meta" style="text-align:left;padding:0;margin-bottom:18px"></div>
+  <div id="r-bars"></div>
 </div>
 
-<div id="screen-admin" class="screen">
-  <button class="back-btn" onclick="show('home')">← Back</button>
-  <div style="font-family:'Bebas Neue',cursive;font-size:28px;letter-spacing:0.04em;margin-bottom:16px">MC Panel</div>
-  <div id="admin-gate">
-    <div class="admin-card">
-      <div class="admin-card-title">Enter admin PIN</div>
-      <input type="password" id="pin-input" placeholder="PIN" maxlength="6" style="width:160px">
-      <button class="btn-primary" style="width:160px" onclick="checkPin()">Unlock</button>
-      <div id="pin-err" style="color:var(--red);font-size:13px;margin-top:6px;display:none">Wrong PIN</div>
+<!-- ADMIN -->
+<div id="s-admin" class="screen">
+  <button class="back" onclick="show('home')">← Back</button>
+  <div class="pg-title">MC Panel</div>
+
+  <!-- PIN gate -->
+  <div id="a-gate">
+    <div class="card">
+      <div class="sec">Enter admin PIN</div>
+      <input class="fi" type="text" id="pin-in" placeholder="PIN" maxlength="6"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+             inputmode="numeric" style="width:160px">
+      <button class="btn btn-acc" style="width:160px" onclick="checkPin()">Unlock</button>
+      <div id="pin-err" style="color:var(--red);font-size:13px;margin-top:6px;display:none">Wrong PIN — try 1234</div>
     </div>
   </div>
-  <div id="admin-body" style="display:none">
-    <div class="admin-card">
-      <div class="admin-card-title">Setup — DJ names</div>
-      <div id="battle-setup-rows"></div>
-      <button class="btn-primary" onclick="saveBattles()">Save &amp; publish</button>
+
+  <!-- Admin body -->
+  <div id="a-body" style="display:none">
+
+    <!-- Step 1: DJ count -->
+    <div class="card" id="a-count-card">
+      <div class="sec">Step 1 — How many DJs tonight?</div>
+      <div class="count-grid" id="count-grid"></div>
+      <div id="count-info" style="font-size:13px;color:var(--muted);margin-bottom:12px"></div>
+      <button class="btn btn-acc btn-full" id="count-confirm" onclick="confirmCount()" disabled>Confirm &amp; build bracket</button>
     </div>
-    <div class="admin-card">
-      <div class="admin-card-title">Battle control</div>
-      <div id="battle-ctrl-rows"></div>
+
+    <!-- Bracket view -->
+    <div class="card" id="a-bracket-card" style="display:none">
+      <div class="sec">Bracket</div>
+      <div class="bracket-wrap" id="bracket-svg-wrap"></div>
+      <button class="btn btn-ghost btn-full" onclick="resetCount()" style="margin-top:4px;font-size:13px">Change DJ count</button>
     </div>
-    <div class="admin-card">
-      <div class="admin-card-title">Change PIN</div>
-      <div class="pin-wrap">
-        <input type="text" id="new-pin" placeholder="New PIN" maxlength="6">
-        <button class="btn-ghost" style="flex-shrink:0;padding:10px 16px" onclick="changePin()">Save</button>
+
+    <!-- Step 2: Enter DJ names round by round -->
+    <div class="card" id="a-names-card" style="display:none">
+      <div class="sec" id="names-title">Step 2 — Enter DJ names</div>
+      <div id="names-body"></div>
+      <button class="btn btn-acc btn-full" id="names-save" onclick="saveNames()">Save &amp; publish</button>
+    </div>
+
+    <!-- Step 3: Battle control -->
+    <div class="card" id="a-ctrl-card" style="display:none">
+      <div class="sec">Battle control</div>
+      <div id="ctrl-body"></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card">
+      <div class="sec">Change PIN</div>
+      <div style="display:flex;gap:8px">
+        <input class="fi" type="text" id="new-pin" placeholder="New PIN" maxlength="6"
+               autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+               inputmode="numeric" style="flex:1;margin-bottom:0">
+        <button class="btn btn-ghost" style="flex-shrink:0;padding:10px 16px" onclick="changePin()">Save</button>
       </div>
     </div>
-    <button class="danger-btn" onclick="resetAll()">Reset all data &amp; votes</button>
+    <button class="btn btn-danger btn-full" onclick="resetAll()">Reset all data &amp; votes</button>
   </div>
 </div>
 
 <script>
-// ── Firebase REST API config ──────────────────────────────────────────────
-const DB_URL = 'https://dj-battle-18905-default-rtdb.asia-southeast1.firebasedatabase.app';
-const PATH   = '/salsaBattle';
+// ─── Firebase REST ────────────────────────────────────────────────────────
+const DB  = 'https://dj-battle-18905-default-rtdb.asia-southeast1.firebasedatabase.app';
+const REF = '/salsaBattle2';
 
-async function fbGet() {
-  const r = await fetch(`${DB_URL}${PATH}.json`);
-  if (!r.ok) throw new Error('GET failed: ' + r.status);
+async function fbGet(){
+  const r=await fetch(`${DB}${REF}.json`);
+  if(!r.ok) throw new Error('GET '+r.status);
   return r.json();
 }
-async function fbSet(data) {
-  const r = await fetch(`${DB_URL}${PATH}.json`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error('PUT failed: ' + r.status);
-  return r.json();
-}
-async function fbPatch(data) {
-  const r = await fetch(`${DB_URL}${PATH}.json`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error('PATCH failed: ' + r.status);
+async function fbSet(d){
+  const r=await fetch(`${DB}${REF}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+  if(!r.ok) throw new Error('PUT '+r.status);
   return r.json();
 }
 
-// ── Default state ─────────────────────────────────────────────────────────
-const DEFAULT_STATE = {
-  pin: '1234',
-  battles: [
-    {id:'b1',round:'Quarter-final',label:'Battle 1',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
-    {id:'b2',round:'Quarter-final',label:'Battle 2',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
-    {id:'b3',round:'Semi-final',  label:'Semi-final 1',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
-    {id:'b4',round:'Semi-final',  label:'Semi-final 2',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
-    {id:'b5',round:'Final',       label:'Grand Final',dj1:'',dj2:'',status:'waiting',votes:{},winner:''},
-  ]
-};
+// ─── Bracket logic ────────────────────────────────────────────────────────
+// Given N DJs, find next power of 2 >= N.
+// byes = nextPow2 - N
+// Round 1 (prelims): (N - byes) DJs battle → N - 2*byes... 
+// Simpler: slots = nextPow2, byes = slots - N
+// prelim battles = N - slots/2  ... no.
+// Correct:
+//   slots = next power of 2 >= N
+//   byes  = slots - N
+//   prelim battles = N - slots/2   (DJs who must play in round 1)
+//   Actually: slots/2 = quarter-final slots. byes go straight there.
+//   prelim battles = slots/2 - byes = N - slots/2
+// Then rounds: ceil(log2(N)) rounds total including final.
 
-let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-let currentBattle = null, selectedDJ = null, adminUnlocked = false;
-let pollTimer = null;
+function nextPow2(n){ let p=1; while(p<n) p*=2; return p; }
 
-// ── Voter ID ──────────────────────────────────────────────────────────────
-function getVoterKey() {
-  let k = localStorage.getItem('salsaVoterID');
-  if (!k) { k = 'v_' + Math.random().toString(36).slice(2); localStorage.setItem('salsaVoterID', k); }
+function buildBracket(n){
+  const slots = nextPow2(n);
+  const byes  = slots - n;
+  const prelimBattles = n - slots/2;   // number of prelim battles (round 1)
+  // If n is already a power of 2, no prelims needed (prelimBattles=0)
+  const hasPrelim = prelimBattles > 0;
+
+  // Build rounds array
+  // Each round: array of battles {id, label, round, type:'battle'|'bye', dj1, dj2, status, votes, winner}
+  const rounds = [];
+
+  if(hasPrelim){
+    const r1 = [];
+    for(let i=0;i<prelimBattles;i++){
+      r1.push(makeBattle(`p${i+1}`, 'Prelim', `Prelim ${i+1}`));
+    }
+    rounds.push({name:'Prelims', battles:r1});
+  }
+
+  // QF / SF / F depending on slots
+  const sfCount = slots/2;  // number of semi-final slots (= slots/2 teams in round 2)
+  // Round 2 (or round 1 if no prelims): sfCount/2 battles
+  // But some of those slots are filled by byes
+
+  // We'll model each knockout round:
+  let remaining = slots/2; // teams in round after prelims
+  let roundNum  = hasPrelim ? 2 : 1;
+  while(remaining >= 2){
+    const battles = remaining/2;
+    let rname;
+    if(remaining===2)       rname='Final';
+    else if(remaining===4)  rname='Semi-finals';
+    else if(remaining===8)  rname='Quarter-finals';
+    else                    rname=`Round of ${remaining}`;
+
+    const rb=[];
+    for(let i=0;i<battles;i++){
+      rb.push(makeBattle(`r${roundNum}b${i+1}`, rname, `${rname.replace('-finals','').replace(' of '+remaining,'')} ${battles>1?i+1:''}`  .trim() ));
+    }
+    rounds.push({name:rname, battles:rb});
+    remaining=remaining/2;
+    roundNum++;
+  }
+
+  return {n, slots, byes, hasPrelim, prelimBattles, rounds};
+}
+
+function makeBattle(id, round, label){
+  return {id, round, label, dj1:'', dj2:'', status:'waiting', votes:{}, winner:''};
+}
+
+// Flatten all battles from bracket
+function allBattles(bracket){
+  return bracket.rounds.flatMap(r=>r.battles);
+}
+
+// ─── State ────────────────────────────────────────────────────────────────
+const DEFAULT = { pin:'1234', bracket:null };
+let state = JSON.parse(JSON.stringify(DEFAULT));
+let currentBattle=null, selectedDJ=null, adminUnlocked=false;
+let selectedCount=0, pollTimer=null;
+
+function getVoterKey(){
+  let k=localStorage.getItem('salsaVID');
+  if(!k){k='v_'+Math.random().toString(36).slice(2);localStorage.setItem('salsaVID',k);}
   return k;
 }
 
-// ── Status bar ────────────────────────────────────────────────────────────
-function setStatus(msg, isErr) {
-  const el = document.getElementById('status-bar');
-  if (!el) return;
-  el.textContent = msg;
-  el.className = 'status-bar' + (isErr ? ' err' : '');
+async function save(){
+  try{ await fbSet(state); }
+  catch(e){ setStatus('⚠ Save failed',true); }
 }
 
-// ── Save ──────────────────────────────────────────────────────────────────
-async function save() {
-  try { await fbSet(state); } catch(e) { setStatus('⚠ Save failed: ' + e.message, true); }
+function setStatus(msg,err){
+  const el=document.getElementById('home-status');
+  if(!el) return;
+  el.textContent=msg;
+  el.className='status'+(err?' err':'');
 }
 
-// ── Poll for live updates every 4 seconds ────────────────────────────────
-function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
-    try {
-      const d = await fbGet();
-      if (d && d.battles) {
-        state = d;
-        const active = document.querySelector('.screen.active');
-        if (!active) return;
-        if (active.id === 'screen-home') renderHome();
-        if (active.id === 'screen-results' && currentBattle) {
-          const updated = state.battles.find(x => x.id === currentBattle.id);
-          if (updated) { currentBattle = updated; renderResultsScreen(updated); }
-        }
-        if (active.id === 'screen-admin' && adminUnlocked) renderAdminBody();
-      }
-    } catch(e) { /* silent poll fail */ }
-  }, 4000);
+// ─── Poll ─────────────────────────────────────────────────────────────────
+function startPoll(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer=setInterval(async()=>{
+    try{
+      const d=await fbGet();
+      if(d&&d.pin){ state=d; syncUI(); }
+    }catch(e){}
+  },4000);
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────
-async function init() {
-  setStatus('Connecting…');
-  try {
-    const d = await fbGet();
-    if (d && d.battles) {
-      state = d;
-      setStatus('');
-    } else {
-      // First run — write defaults
-      await fbSet(DEFAULT_STATE);
-      state = JSON.parse(JSON.stringify(DEFAULT_STATE));
-      setStatus('');
-    }
-  } catch(e) {
-    setStatus('⚠ Cannot reach database. Check connection.', true);
+function syncUI(){
+  const active=document.querySelector('.screen.active');
+  if(!active) return;
+  if(active.id==='s-home')    renderHome();
+  if(active.id==='s-results'&&currentBattle){
+    const b=allBattles(state.bracket||{rounds:[]}).find(x=>x.id===currentBattle.id);
+    if(b){currentBattle=b;renderResultsScreen(b);}
   }
+  if(active.id==='s-admin'&&adminUnlocked) renderAdminBody();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+async function init(){
+  setStatus('Connecting…');
+  try{
+    const d=await fbGet();
+    if(d&&d.pin){ state=d; setStatus(''); }
+    else{ await fbSet(DEFAULT); setStatus(''); }
+  }catch(e){ setStatus('⚠ Cannot reach database',true); }
   renderHome();
-  startPolling();
+  startPoll();
 }
 
-// ── Screen navigation ─────────────────────────────────────────────────────
-function show(s) {
-  document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
-  document.getElementById('screen-' + s).classList.add('active');
-  if (s === 'home') renderHome();
-  if (s === 'admin' && adminUnlocked) renderAdminBody();
+// ─── Screens ──────────────────────────────────────────────────────────────
+function show(s){
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+  document.getElementById('s-'+s).classList.add('active');
+  if(s==='home') renderHome();
+  if(s==='admin'&&adminUnlocked) renderAdminBody();
 }
 
-// ── Home screen ───────────────────────────────────────────────────────────
-function renderHome() {
-  const el = document.getElementById('battle-list');
-  el.innerHTML = '';
-  const hasLive = state.battles.some(b => b.status === 'live');
-  document.getElementById('live-indicator').style.display = hasLive ? 'flex' : 'none';
-  const visible = state.battles.filter(b => b.dj1 || b.dj2);
-  if (!visible.length) {
-    el.innerHTML = '<div class="empty-state">No battles published yet.<br>Check back soon!</div>';
+// ─── HOME ─────────────────────────────────────────────────────────────────
+function renderHome(){
+  const el=document.getElementById('home-list');
+  el.innerHTML='';
+  const bracket=state.bracket;
+  if(!bracket||!bracket.rounds){
+    el.innerHTML='<div style="text-align:center;padding:32px 0;color:var(--muted);font-size:14px;line-height:1.6">No battles yet.<br>Check back soon!</div>';
+    document.getElementById('live-ind').style.display='none';
     return;
   }
-  visible.forEach(b => {
-    const votes = b.votes || {};
-    const total = Object.keys(votes).length;
-    const voted = votes[getVoterKey()];
-    const pill = b.status === 'live'   ? '<span class="status-pill pill-live">Live</span>'
-               : b.status === 'closed' ? '<span class="status-pill pill-closed">Closed</span>'
-               :                         '<span class="status-pill pill-waiting">Soon</span>';
-    const winnerRow = b.winner ? `<div class="winner-row">🏆 Winner: ${b.winner}</div>` : '';
-    const canVote    = b.status === 'live' && !voted;
-    const canResults = total > 0 || b.status === 'closed';
-    const div = document.createElement('div');
-    div.className = 'battle-card' + (b.status === 'live' ? ' live' : '');
-    div.innerHTML = `
-      <div class="battle-card-top"><span class="round-tag">${b.round} · ${b.label}</span>${pill}</div>
-      <div class="battle-djs">
-        <div class="dj-name-home">${b.dj1 || '?'}</div>
-        <div class="vs-badge">VS</div>
-        <div class="dj-name-home">${b.dj2 || '?'}</div>
-      </div>
-      <div class="battle-meta">${total} vote${total !== 1 ? 's' : ''}${voted ? ' · You voted: ' + voted : ''}</div>
-      ${winnerRow}
-      <div class="card-btns">
-        ${canVote    ? `<button class="btn-primary" onclick="openVote('${b.id}')">Vote now</button>` : ''}
-        ${canResults ? `<button class="btn-ghost"   onclick="openResults('${b.id}')">Results</button>` : ''}
-      </div>`;
-    el.appendChild(div);
+  const battles=allBattles(bracket);
+  const hasLive=battles.some(b=>b.status==='live');
+  document.getElementById('live-ind').style.display=hasLive?'flex':'none';
+  const visible=battles.filter(b=>b.dj1||b.dj2||b.status==='waiting');
+
+  bracket.rounds.forEach(round=>{
+    const rBattles=round.battles;
+    const anyPublished=rBattles.some(b=>b.dj1||b.dj2);
+    if(!anyPublished) return;
+    const rdiv=document.createElement('div');
+    rdiv.innerHTML=`<div class="sec" style="margin-top:8px">${round.name}</div>`;
+    el.appendChild(rdiv);
+    rBattles.forEach(b=>{
+      if(!b.dj1&&!b.dj2) return;
+      const votes=b.votes||{};
+      const total=Object.keys(votes).length;
+      const voted=votes[getVoterKey()];
+      const pill=b.status==='live'?'<span class="pill pill-live">Live</span>'
+                :b.status==='closed'?'<span class="pill pill-closed">Closed</span>'
+                :'<span class="pill pill-wait">Soon</span>';
+      const winRow=b.winner?`<div class="winner-row">🏆 Winner: ${b.winner}</div>`:'';
+      const canVote=b.status==='live'&&!voted;
+      const canRes=total>0||b.status==='closed';
+      const div=document.createElement('div');
+      div.className='card'+(b.status==='live'?' live':'');
+      div.innerHTML=`
+        <div class="card-top"><span class="rtag">${b.label}</span>${pill}</div>
+        <div class="djs">
+          <div class="djn">${b.dj1||'?'}</div>
+          <div class="vsbadge">VS</div>
+          <div class="djn">${b.dj2||'?'}</div>
+        </div>
+        <div class="meta">${total} vote${total!==1?'s':''}${voted?' · You voted: '+voted:''}</div>
+        ${winRow}
+        <div class="row-btns">
+          ${canVote?`<button class="btn btn-acc" onclick="openVote('${b.id}')">Vote now</button>`:''}
+          ${canRes?`<button class="btn btn-ghost" onclick="openResults('${b.id}')">Results</button>`:''}
+        </div>`;
+      el.appendChild(div);
+    });
   });
 }
 
-// ── Vote screen ───────────────────────────────────────────────────────────
-function openVote(id) {
-  const b = state.battles.find(x => x.id === id);
-  if (!b || b.status !== 'live') return;
-  if ((b.votes || {})[getVoterKey()]) { alert('You already voted in this battle!'); return; }
-  currentBattle = b; selectedDJ = null;
-  document.getElementById('vote-round').textContent   = b.round + ' · ' + b.label;
-  document.getElementById('vote-heading').textContent = b.dj1 + ' vs ' + b.dj2;
-  const opts = document.getElementById('vote-options');
-  opts.innerHTML = '';
-  [b.dj1, b.dj2].forEach(dj => {
-    const btn = document.createElement('button');
-    btn.className = 'vote-btn';
-    btn.innerHTML = `<div class="vote-avatar">${initials(dj)}</div><div class="vote-dj-name">${dj}</div>`;
-    btn.onclick = () => {
-      document.querySelectorAll('.vote-btn').forEach(x => x.classList.remove('selected'));
-      btn.classList.add('selected');
-      selectedDJ = dj;
-      document.getElementById('vote-submit').disabled = false;
+// ─── VOTE ─────────────────────────────────────────────────────────────────
+function openVote(id){
+  if(!state.bracket) return;
+  const b=allBattles(state.bracket).find(x=>x.id===id);
+  if(!b||b.status!=='live') return;
+  if((b.votes||{})[getVoterKey()]){alert('You already voted in this battle!');return;}
+  currentBattle=b; selectedDJ=null;
+  document.getElementById('v-round').textContent=b.round+' · '+b.label;
+  document.getElementById('v-heading').textContent=b.dj1+' vs '+b.dj2;
+  const opts=document.getElementById('v-opts');
+  opts.innerHTML='';
+  [b.dj1,b.dj2].forEach(dj=>{
+    const btn=document.createElement('button');
+    btn.className='vbtn';
+    btn.innerHTML=`<div class="avatar">${ini(dj)}</div><div class="vdjn">${dj}</div>`;
+    btn.onclick=()=>{
+      document.querySelectorAll('.vbtn').forEach(x=>x.classList.remove('sel'));
+      btn.classList.add('sel'); selectedDJ=dj;
+      document.getElementById('v-submit').disabled=false;
     };
     opts.appendChild(btn);
   });
-  document.getElementById('vote-submit').disabled = true;
+  document.getElementById('v-submit').disabled=true;
   show('vote');
 }
 
-async function submitVote() {
-  if (!selectedDJ || !currentBattle) return;
-  const key = getVoterKey();
-  const submitBtn = document.getElementById('vote-submit');
-  submitBtn.disabled = true;
-  submitBtn.textContent = 'Submitting…';
-  try {
-    // Re-fetch to get latest votes before writing
-    const fresh = await fbGet();
-    if (!fresh || !fresh.battles) throw new Error('No data');
-    const idx = fresh.battles.findIndex(x => x.id === currentBattle.id);
-    if (idx === -1) throw new Error('Battle not found');
-    if (!fresh.battles[idx].votes) fresh.battles[idx].votes = {};
-    if (fresh.battles[idx].votes[key]) { alert('Already voted!'); show('home'); return; }
-    fresh.battles[idx].votes[key] = selectedDJ;
+async function submitVote(){
+  if(!selectedDJ||!currentBattle) return;
+  const key=getVoterKey();
+  const sb=document.getElementById('v-submit');
+  sb.disabled=true; sb.textContent='Submitting…';
+  try{
+    const fresh=await fbGet();
+    if(!fresh||!fresh.bracket) throw new Error('No data');
+    const b=allBattles(fresh.bracket).find(x=>x.id===currentBattle.id);
+    if(!b) throw new Error('Battle not found');
+    if(!b.votes) b.votes={};
+    if(b.votes[key]){alert('Already voted!');show('home');return;}
+    b.votes[key]=selectedDJ;
     await fbSet(fresh);
-    state = fresh;
-    document.getElementById('thanks-msg').textContent = 'You voted for ' + selectedDJ + '. Results update live.';
+    state=fresh;
+    document.getElementById('thanks-msg').textContent='You voted for '+selectedDJ+'. Results update live.';
     show('voted');
-  } catch(e) {
-    alert('Vote failed: ' + e.message + '. Please try again.');
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Submit vote';
+  }catch(e){
+    alert('Vote failed: '+e.message);
+    sb.disabled=false; sb.textContent='Submit vote';
   }
 }
 
-// ── Results screen ────────────────────────────────────────────────────────
-function openResults(id) {
-  const b = state.battles.find(x => x.id === id);
-  if (!b) return;
-  currentBattle = b;
-  renderResultsScreen(b);
-  show('results');
+// ─── RESULTS ──────────────────────────────────────────────────────────────
+function openResults(id){
+  if(!state.bracket) return;
+  const b=allBattles(state.bracket).find(x=>x.id===id);
+  if(!b) return;
+  currentBattle=b; renderResultsScreen(b); show('results');
 }
 
-function renderResultsScreen(b) {
-  const votes = b.votes || {};
-  const total = Object.keys(votes).length;
-  const v1 = Object.values(votes).filter(x => x === b.dj1).length;
-  const v2 = Object.values(votes).filter(x => x === b.dj2).length;
-  const p1 = total ? Math.round(v1 / total * 100) : 0;
-  const p2 = total ? Math.round(v2 / total * 100) : 0;
-  document.getElementById('res-round').textContent   = b.round + ' · ' + b.label;
-  document.getElementById('res-heading').textContent = b.dj1 + ' vs ' + b.dj2;
-  document.getElementById('res-meta').textContent    = total + ' total vote' + (total !== 1 ? 's' : '');
-  const winnerBlock = b.winner
-    ? `<div class="winner-announce"><div class="label">Winner</div><div class="name">${b.winner}</div></div>` : '';
-  document.getElementById('res-bars').innerHTML = `
+function renderResultsScreen(b){
+  const votes=b.votes||{};
+  const total=Object.keys(votes).length;
+  const v1=Object.values(votes).filter(x=>x===b.dj1).length;
+  const v2=Object.values(votes).filter(x=>x===b.dj2).length;
+  const p1=total?Math.round(v1/total*100):0;
+  const p2=total?Math.round(v2/total*100):0;
+  document.getElementById('r-round').textContent=b.round+' · '+b.label;
+  document.getElementById('r-heading').textContent=b.dj1+' vs '+b.dj2;
+  document.getElementById('r-meta').textContent=total+' total vote'+(total!==1?'s':'');
+  const wb=b.winner?`<div class="win-box"><div class="wl">Winner</div><div class="wn">${b.winner}</div></div>`:'';
+  document.getElementById('r-bars').innerHTML=`
     <div class="bar-row">
-      <div class="bar-top"><span class="bar-dj">${b.dj1}</span><span class="bar-count">${v1} (${p1}%)</span></div>
+      <div class="bar-top"><span class="bar-dj">${b.dj1}</span><span class="bar-ct">${v1} (${p1}%)</span></div>
       <div class="bar-track"><div class="bar-fill bar-a" style="width:${p1}%"></div></div>
     </div>
     <div class="bar-row">
-      <div class="bar-top"><span class="bar-dj">${b.dj2}</span><span class="bar-count">${v2} (${p2}%)</span></div>
+      <div class="bar-top"><span class="bar-dj">${b.dj2}</span><span class="bar-ct">${v2} (${p2}%)</span></div>
       <div class="bar-track"><div class="bar-fill bar-b" style="width:${p2}%"></div></div>
-    </div>
-    ${winnerBlock}`;
+    </div>${wb}`;
 }
 
-// ── Admin ─────────────────────────────────────────────────────────────────
-function showAdmin() {
-  adminUnlocked = false;
-  document.getElementById('admin-gate').style.display  = 'block';
-  document.getElementById('admin-body').style.display  = 'none';
-  document.getElementById('pin-err').style.display     = 'none';
-  document.getElementById('pin-input').value           = '';
+// ─── ADMIN ────────────────────────────────────────────────────────────────
+function goAdmin(){
+  adminUnlocked=false;
+  document.getElementById('a-gate').style.display='block';
+  document.getElementById('a-body').style.display='none';
+  document.getElementById('pin-err').style.display='none';
+  document.getElementById('pin-in').value='';
   show('admin');
 }
 
-function checkPin() {
-  const v = document.getElementById('pin-input').value.trim();
-  if (v === String(state.pin)) {
-    adminUnlocked = true;
-    document.getElementById('admin-gate').style.display = 'none';
-    document.getElementById('admin-body').style.display = 'block';
+function checkPin(){
+  const v=document.getElementById('pin-in').value.trim();
+  if(v===String(state.pin)){
+    adminUnlocked=true;
+    document.getElementById('a-gate').style.display='none';
+    document.getElementById('a-body').style.display='block';
     renderAdminBody();
-  } else {
-    document.getElementById('pin-err').style.display = 'block';
-    // Debug helper — remove before event night
-    console.log('Entered:', v, '| Expected:', state.pin);
+  }else{
+    document.getElementById('pin-err').style.display='block';
   }
 }
 
-function renderAdminBody() {
-  const setup = document.getElementById('battle-setup-rows');
-  setup.innerHTML = '';
-  state.battles.forEach(b => {
-    const wrap = document.createElement('div');
-    wrap.style.marginBottom = '14px';
-    wrap.innerHTML = `<div class="setup-label">${b.label}</div>
-      <div class="setup-row">
-        <input type="text" placeholder="DJ A name" value="${b.dj1}" id="s_${b.id}_1">
-        <span class="setup-vs">VS</span>
-        <input type="text" placeholder="DJ B name" value="${b.dj2}" id="s_${b.id}_2">
-      </div>`;
-    setup.appendChild(wrap);
-  });
-
-  const ctrl = document.getElementById('battle-ctrl-rows');
-  ctrl.innerHTML = '';
-  state.battles.forEach(b => {
-    if (!b.dj1 && !b.dj2) return;
-    const total = Object.keys(b.votes || {}).length;
-    const row = document.createElement('div');
-    row.className = 'battle-control-row';
-    const winnerBtns = b.status === 'closed' && !b.winner
-      ? `<button class="btn-sm btn-sm-win-a" onclick="declareWinner('${b.id}','${b.dj1}')">→ ${b.dj1}</button>
-         <button class="btn-sm btn-sm-win-b" onclick="declareWinner('${b.id}','${b.dj2}')">→ ${b.dj2}</button>` : '';
-    row.innerHTML = `
-      <div>
-        <div class="ctrl-name">${b.dj1 || '?'} vs ${b.dj2 || '?'}</div>
-        <div class="ctrl-meta">${b.label} · ${total} votes${b.winner ? ' · 🏆 ' + b.winner : ''}</div>
-      </div>
-      <div class="ctrl-btns">
-        ${b.status === 'waiting' ? `<button class="btn-sm btn-sm-open"  onclick="openBattle('${b.id}')">Open voting</button>` : ''}
-        ${b.status === 'live'    ? `<button class="btn-sm btn-sm-close" onclick="closeBattle('${b.id}')">Close voting</button>` : ''}
-        ${winnerBtns}
-      </div>`;
-    ctrl.appendChild(row);
-  });
+function renderAdminBody(){
+  renderCountCard();
+  if(state.bracket){
+    document.getElementById('a-count-card').style.display='none';
+    document.getElementById('a-bracket-card').style.display='block';
+    document.getElementById('a-names-card').style.display='block';
+    document.getElementById('a-ctrl-card').style.display='block';
+    renderBracketSVG();
+    renderNamesCard();
+    renderCtrlCard();
+  } else {
+    document.getElementById('a-count-card').style.display='block';
+    document.getElementById('a-bracket-card').style.display='none';
+    document.getElementById('a-names-card').style.display='none';
+    document.getElementById('a-ctrl-card').style.display='none';
+  }
 }
 
-async function saveBattles() {
-  state.battles.forEach(b => {
-    const d1 = document.getElementById(`s_${b.id}_1`);
-    const d2 = document.getElementById(`s_${b.id}_2`);
-    if (d1) b.dj1 = d1.value.trim();
-    if (d2) b.dj2 = d2.value.trim();
-  });
+// ─── COUNT CARD ───────────────────────────────────────────────────────────
+function renderCountCard(){
+  const grid=document.getElementById('count-grid');
+  grid.innerHTML='';
+  for(let i=5;i<=12;i++){
+    const b=document.createElement('button');
+    b.className='count-btn'+(selectedCount===i?' active':'');
+    b.textContent=i;
+    b.onclick=()=>selectCount(i);
+    grid.appendChild(b);
+  }
+  updateCountInfo();
+}
+
+function selectCount(n){
+  selectedCount=n;
+  document.getElementById('count-confirm').disabled=false;
+  renderCountCard();
+}
+
+function updateCountInfo(){
+  const el=document.getElementById('count-info');
+  if(!selectedCount){el.textContent='';return;}
+  const slots=nextPow2(selectedCount);
+  const byes=slots-selectedCount;
+  const prelims=selectedCount-slots/2;
+  if(byes===0){
+    el.textContent=`${selectedCount} DJs — perfect bracket, no byes needed.`;
+  } else {
+    el.textContent=`${selectedCount} DJs → ${byes} bye${byes>1?'s':''}, ${prelims} prelim battle${prelims>1?'s':''} in round 1.`;
+  }
+}
+
+async function confirmCount(){
+  if(!selectedCount) return;
+  const bracket=buildBracket(selectedCount);
+  state.bracket=bracket;
   await save();
-  alert('Battles saved and published!');
   renderAdminBody();
 }
 
-async function openBattle(id) {
-  const b = state.battles.find(x => x.id === id);
-  if (b) { b.status = 'live'; await save(); renderAdminBody(); renderHome(); }
+function resetCount(){
+  if(!confirm('This will clear the current bracket and all votes. Continue?')) return;
+  state.bracket=null; selectedCount=0;
+  save(); renderAdminBody();
 }
 
-async function closeBattle(id) {
-  const b = state.battles.find(x => x.id === id);
-  if (b) { b.status = 'closed'; await save(); renderAdminBody(); }
+// ─── BRACKET SVG ─────────────────────────────────────────────────────────
+function renderBracketSVG(){
+  if(!state.bracket) return;
+  const wrap=document.getElementById('bracket-svg-wrap');
+  wrap.innerHTML='';
+  const br=state.bracket;
+  const rounds=br.rounds;
+  const nRounds=rounds.length;
+  const colW=120, colGap=28, rowH=52, padding=12;
+  const maxBattles=Math.max(...rounds.map(r=>r.battles.length));
+  const totalW=nRounds*colW+(nRounds-1)*colGap+padding*2;
+  const totalH=maxBattles*rowH+padding*2;
+
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox',`0 0 ${totalW} ${totalH}`);
+  svg.setAttribute('width',totalW);
+  svg.setAttribute('height',totalH);
+  svg.classList.add('bracket');
+
+  const col=(i)=>padding+i*(colW+colGap);
+  const rowCenter=(roundIdx,battleIdx)=>{
+    const battles=rounds[roundIdx].battles.length;
+    const totalSlots=maxBattles;
+    const slotH=totalSlots*rowH/battles;
+    return padding + battleIdx*slotH + slotH/2;
+  };
+
+  rounds.forEach((round,ri)=>{
+    const x=col(ri);
+    round.battles.forEach((b,bi)=>{
+      const cy=rowCenter(ri,bi);
+      const y=cy-rowH/2+4;
+
+      // Box
+      const rect=document.createElementNS(ns,'rect');
+      rect.setAttribute('x',x);
+      rect.setAttribute('y',y);
+      rect.setAttribute('width',colW);
+      rect.setAttribute('height',rowH-8);
+      rect.setAttribute('rx',6);
+      rect.setAttribute('fill',b.status==='live'?'rgba(226,75,74,0.18)':b.winner?'rgba(29,158,117,0.12)':'#1a1714');
+      rect.setAttribute('stroke',b.status==='live'?'#e24b4a':b.winner?'#1d9e75':'rgba(255,255,255,0.12)');
+      rect.setAttribute('stroke-width','1');
+      svg.appendChild(rect);
+
+      // DJ1
+      const t1=document.createElementNS(ns,'text');
+      t1.setAttribute('x',x+6); t1.setAttribute('y',y+14);
+      t1.setAttribute('font-size','10'); t1.setAttribute('fill',b.winner===b.dj1?'#e8a020':'#f0ece4');
+      t1.setAttribute('font-weight',b.winner===b.dj1?'600':'400');
+      t1.textContent=truncate(b.dj1||'—',14);
+      svg.appendChild(t1);
+
+      // VS
+      const tv=document.createElementNS(ns,'text');
+      tv.setAttribute('x',x+6); tv.setAttribute('y',y+(rowH-8)/2);
+      tv.setAttribute('font-size','8'); tv.setAttribute('fill','#8a8070');
+      tv.textContent='vs';
+      svg.appendChild(tv);
+
+      // DJ2
+      const t2=document.createElementNS(ns,'text');
+      t2.setAttribute('x',x+6); t2.setAttribute('y',y+rowH-14);
+      t2.setAttribute('font-size','10'); t2.setAttribute('fill',b.winner===b.dj2?'#e8a020':'#f0ece4');
+      t2.setAttribute('font-weight',b.winner===b.dj2?'600':'400');
+      t2.textContent=truncate(b.dj2||'—',14);
+      svg.appendChild(t2);
+
+      // Winner label
+      if(b.winner){
+        const tw=document.createElementNS(ns,'text');
+        tw.setAttribute('x',x+colW-4); tw.setAttribute('y',y+14);
+        tw.setAttribute('font-size','9'); tw.setAttribute('fill','#1d9e75');
+        tw.setAttribute('text-anchor','end');
+        tw.textContent='✓';
+        svg.appendChild(tw);
+      }
+
+      // Connector to next round
+      if(ri<nRounds-1){
+        const nx=col(ri+1);
+        const partneredBattle=Math.floor(bi/2);
+        const ncy=rowCenter(ri+1,partneredBattle);
+        const midX=x+colW+colGap/2;
+        const line1=document.createElementNS(ns,'line');
+        line1.setAttribute('x1',x+colW); line1.setAttribute('y1',cy);
+        line1.setAttribute('x2',midX); line1.setAttribute('y2',cy);
+        line1.setAttribute('stroke','rgba(255,255,255,0.1)'); line1.setAttribute('stroke-width','1');
+        svg.appendChild(line1);
+        if(bi%2===1){
+          const prevCy=rowCenter(ri,bi-1);
+          const vline=document.createElementNS(ns,'line');
+          vline.setAttribute('x1',midX); vline.setAttribute('y1',prevCy);
+          vline.setAttribute('x2',midX); vline.setAttribute('y2',cy);
+          vline.setAttribute('stroke','rgba(255,255,255,0.1)'); vline.setAttribute('stroke-width','1');
+          svg.appendChild(vline);
+          const line2=document.createElementNS(ns,'line');
+          line2.setAttribute('x1',midX); line2.setAttribute('y1',(prevCy+cy)/2);
+          line2.setAttribute('x2',nx); line2.setAttribute('y2',ncy);
+          line2.setAttribute('stroke','rgba(255,255,255,0.1)'); line2.setAttribute('stroke-width','1');
+          svg.appendChild(line2);
+        }
+      }
+    });
+
+    // Round label at top
+    const rl=document.createElementNS(ns,'text');
+    rl.setAttribute('x',x+colW/2); rl.setAttribute('y',8);
+    rl.setAttribute('text-anchor','middle'); rl.setAttribute('font-size','9');
+    rl.setAttribute('fill','#8a8070'); rl.setAttribute('font-weight','600');
+    rl.setAttribute('letter-spacing','0.06em');
+    rl.setAttribute('text-transform','uppercase');
+    rl.textContent=round.name.toUpperCase();
+    svg.appendChild(rl);
+  });
+
+  // Bye indicators if prelims exist
+  if(br.hasPrelim){
+    const byeCount=br.byes;
+    const ri=1; // second round (semi or QF) gets the byes
+    if(rounds[ri]){
+      const x=col(ri);
+      // Show bye label on battles that won't have a prelim feeder
+      const byeBattles=rounds[ri].battles.slice(rounds[ri].battles.length-byeCount);
+      byeBattles.forEach((b,idx)=>{
+        const realIdx=rounds[ri].battles.length-byeCount+idx;
+        const cy=rowCenter(ri,realIdx);
+        const y=cy-rowH/2+4;
+        const bl=document.createElementNS(ns,'text');
+        bl.setAttribute('x',x+colW-4); bl.setAttribute('y',y-2);
+        bl.setAttribute('font-size','8'); bl.setAttribute('fill','#7c5cbf');
+        bl.setAttribute('text-anchor','end');
+        bl.textContent='BYE SLOT';
+        svg.appendChild(bl);
+      });
+    }
+  }
+
+  wrap.appendChild(svg);
 }
 
-async function declareWinner(id, dj) {
-  const b = state.battles.find(x => x.id === id);
-  if (b) { b.winner = dj; await save(); renderAdminBody(); }
+// ─── NAMES CARD ───────────────────────────────────────────────────────────
+function renderNamesCard(){
+  if(!state.bracket) return;
+  const body=document.getElementById('names-body');
+  body.innerHTML='';
+
+  // Only show rounds where we can still enter names
+  // (battles where at least one name is missing and the round isn't closed)
+  const br=state.bracket;
+  let anyShown=false;
+
+  br.rounds.forEach((round,ri)=>{
+    // Can we fill this round? 
+    // Round 0 always yes. Later rounds: only if previous round has all winners
+    let canFill=true;
+    if(ri>0){
+      const prevBattles=br.rounds[ri-1].battles;
+      const allDone=prevBattles.every(b=>b.winner);
+      if(!allDone) canFill=false;
+    }
+
+    const needsNames=round.battles.some(b=>!b.dj1||!b.dj2);
+    if(!needsNames) return; // already filled
+
+    const sec=document.createElement('div');
+    sec.innerHTML=`<div class="setup-lbl" style="margin-top:${ri>0?'12px':'0'}">${round.name}</div>`;
+    body.appendChild(sec);
+
+    if(!canFill){
+      const note=document.createElement('div');
+      note.className='pending-note';
+      note.textContent=`Fill in after the previous round's winners are decided.`;
+      body.appendChild(note);
+      return;
+    }
+
+    round.battles.forEach((b,bi)=>{
+      if(b.dj1&&b.dj2) return; // already set
+      anyShown=true;
+      const wrap=document.createElement('div');
+      wrap.innerHTML=`<div class="setup-lbl">${b.label}</div>
+        <div class="setup-row">
+          <input class="fi" type="text" id="n_${b.id}_1" placeholder="DJ A name" value="${b.dj1}"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+          <span class="setup-vs">VS</span>
+          <input class="fi" type="text" id="n_${b.id}_2" placeholder="DJ B name" value="${b.dj2}"
+                 autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        </div>`;
+      body.appendChild(wrap);
+    });
+  });
+
+  if(!anyShown){
+    body.innerHTML='<div style="font-size:13px;color:var(--teal);padding:8px 0">All names entered ✓</div>';
+  }
 }
 
-async function changePin() {
-  const v = document.getElementById('new-pin').value.trim();
-  if (v.length < 4) { alert('PIN must be at least 4 characters'); return; }
-  state.pin = v; await save(); alert('PIN updated to: ' + v);
-}
-
-async function resetAll() {
-  if (!confirm('Reset ALL battles and votes? This cannot be undone.')) return;
-  state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+async function saveNames(){
+  if(!state.bracket) return;
+  state.bracket.rounds.forEach(round=>{
+    round.battles.forEach(b=>{
+      const d1=document.getElementById(`n_${b.id}_1`);
+      const d2=document.getElementById(`n_${b.id}_2`);
+      if(d1&&d1.value.trim()) b.dj1=d1.value.trim();
+      if(d2&&d2.value.trim()) b.dj2=d2.value.trim();
+    });
+  });
   await save();
-  adminUnlocked = false;
-  show('home');
+  renderBracketSVG();
+  renderNamesCard();
+  renderCtrlCard();
+  alert('Saved!');
 }
 
-function initials(name) {
-  return (name || '').split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase() || 'DJ';
+// ─── CTRL CARD ────────────────────────────────────────────────────────────
+function renderCtrlCard(){
+  if(!state.bracket) return;
+  const body=document.getElementById('ctrl-body');
+  body.innerHTML='';
+  const battles=allBattles(state.bracket).filter(b=>b.dj1&&b.dj2);
+  if(!battles.length){
+    body.innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">No battles published yet.</div>';
+    return;
+  }
+  battles.forEach(b=>{
+    const total=Object.keys(b.votes||{}).length;
+    const row=document.createElement('div');
+    row.className='ctrl-row';
+    const winBtns=b.status==='closed'&&!b.winner
+      ?`<button class="btn-sm btn-sm-win-a" onclick="declareWinner('${b.id}','${b.dj1}')">→ ${b.dj1}</button>
+        <button class="btn-sm btn-sm-win-b" onclick="declareWinner('${b.id}','${b.dj2}')">→ ${b.dj2}</button>`:'';
+    row.innerHTML=`
+      <div>
+        <div style="font-size:13px;font-weight:500">${b.dj1} vs ${b.dj2}</div>
+        <div style="font-size:12px;color:var(--muted)">${b.label} · ${total} votes${b.winner?' · 🏆 '+b.winner:''}</div>
+      </div>
+      <div class="ctrl-btns">
+        ${b.status==='waiting'?`<button class="btn-sm btn-sm-open" onclick="openBattle('${b.id}')">Open voting</button>`:''}
+        ${b.status==='live'?`<button class="btn-sm btn-sm-close" onclick="closeBattle('${b.id}')">Close voting</button>`:''}
+        ${winBtns}
+      </div>`;
+    body.appendChild(row);
+  });
 }
 
-// ── Start ─────────────────────────────────────────────────────────────────
+async function openBattle(id){
+  const b=allBattles(state.bracket).find(x=>x.id===id);
+  if(b){b.status='live'; await save(); renderCtrlCard(); renderHome();}
+}
+async function closeBattle(id){
+  const b=allBattles(state.bracket).find(x=>x.id===id);
+  if(b){b.status='closed'; await save(); renderCtrlCard();}
+}
+async function declareWinner(id,dj){
+  const b=allBattles(state.bracket).find(x=>x.id===id);
+  if(b){
+    b.winner=dj;
+    await save();
+    renderBracketSVG();
+    renderNamesCard(); // unlock next round if ready
+    renderCtrlCard();
+  }
+}
+
+async function changePin(){
+  const v=document.getElementById('new-pin').value.trim();
+  if(v.length<4){alert('PIN must be at least 4 characters');return;}
+  state.pin=v; await save(); alert('PIN updated to: '+v);
+}
+
+async function resetAll(){
+  if(!confirm('Reset ALL data and votes? This cannot be undone.')) return;
+  state={pin:'1234',bracket:null}; selectedCount=0;
+  await save(); adminUnlocked=false; show('home');
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function ini(name){
+  return (name||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()||'DJ';
+}
+function truncate(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
+
+// ─── Go ───────────────────────────────────────────────────────────────────
 init();
 </script>
 </body>
