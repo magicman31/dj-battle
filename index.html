@@ -132,6 +132,7 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0}
 
 /* PENDING indicator */
 .pending-note{font-size:12px;color:var(--purple);font-style:italic;margin-bottom:8px}
+.inline-vote-panel{margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
 .name-field{min-height:40px;line-height:20px;cursor:text;outline:none;word-break:break-word}
 .name-field:empty::before{content:attr(data-ph);color:var(--muted);pointer-events:none}
 .name-field:focus{border-color:var(--accent)}
@@ -153,16 +154,6 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0}
   <div id="home-status" class="status"></div>
   <hr>
   <button class="btn btn-ghost btn-full" onclick="goAdmin()">⚙ Admin / MC panel</button>
-</div>
-
-<!-- VOTE -->
-<div id="s-vote" class="screen">
-  <button class="back" onclick="show('home')">← Back</button>
-  <div class="vote-round" id="v-round"></div>
-  <div class="vote-h" id="v-heading"></div>
-  <div class="vote-sub">Who brought the heat? Tap your pick.</div>
-  <div id="v-opts"></div>
-  <button class="btn btn-acc btn-full" id="v-submit" disabled onclick="submitVote()">Submit vote</button>
 </div>
 
 <!-- THANKS -->
@@ -408,6 +399,8 @@ function show(s){
 }
 
 // ─── HOME ─────────────────────────────────────────────────────────────────
+let expandedVote = null; // track which battle has inline vote open
+
 function renderHome(){
   const el=document.getElementById('home-list');
   el.innerHTML='';
@@ -420,7 +413,6 @@ function renderHome(){
   const battles=allBattles(bracket);
   const hasLive=battles.some(b=>b.status==='live');
   document.getElementById('live-ind').style.display=hasLive?'flex':'none';
-  const visible=battles.filter(b=>b.dj1||b.dj2||b.status==='waiting');
 
   bracket.rounds.forEach(round=>{
     const rBattles=round.battles;
@@ -431,82 +423,135 @@ function renderHome(){
     el.appendChild(rdiv);
     rBattles.forEach(b=>{
       if(!b.dj1&&!b.dj2) return;
-      const votes=b.votes||{};
-      const total=Object.keys(votes).length;
-      const voted=votes[getVoterKey()];
-      const pill=b.status==='live'?'<span class="pill pill-live">Live</span>'
-                :b.status==='closed'?'<span class="pill pill-closed">Closed</span>'
-                :'<span class="pill pill-wait">Soon</span>';
-      const winRow=b.winner?`<div class="winner-row">🏆 Winner: ${b.winner}</div>`:'';
-      const canVote=b.status==='live'&&!voted;
-      const canRes=total>0||b.status==='closed';
-      const div=document.createElement('div');
-      div.className='card'+(b.status==='live'?' live':'');
-      div.innerHTML=`
-        <div class="card-top"><span class="rtag">${b.label}</span>${pill}</div>
-        <div class="djs">
-          <div class="djn">${b.dj1||'?'}</div>
-          <div class="vsbadge">VS</div>
-          <div class="djn">${b.dj2||'?'}</div>
-        </div>
-        <div class="meta">${total} vote${total!==1?'s':''}${voted?' · You voted: '+voted:''}</div>
-        ${winRow}
-        <div class="row-btns">
-          ${canVote?`<button class="btn btn-acc" onclick="openVote('${b.id}')">Vote now</button>`:''}
-          ${canRes?`<button class="btn btn-ghost" onclick="openResults('${b.id}')">Results</button>`:''}
-        </div>`;
-      el.appendChild(div);
+      el.appendChild(buildBattleCard(b));
     });
   });
 }
 
-// ─── VOTE ─────────────────────────────────────────────────────────────────
-function openVote(id){
-  if(!state.bracket) return;
-  const b=allBattles(state.bracket).find(x=>x.id===id);
-  if(!b||b.status!=='live') return;
-  if((b.votes||{})[getVoterKey()]){alert('You already voted in this battle!');return;}
-  currentBattle=b; selectedDJ=null;
-  document.getElementById('v-round').textContent=b.round+' · '+b.label;
-  document.getElementById('v-heading').textContent=b.dj1+' vs '+b.dj2;
-  const opts=document.getElementById('v-opts');
-  opts.innerHTML='';
-  [b.dj1,b.dj2].forEach(dj=>{
-    const btn=document.createElement('button');
-    btn.className='vbtn';
-    btn.innerHTML=`<div class="avatar">${ini(dj)}</div><div class="vdjn">${dj}</div>`;
-    btn.onclick=()=>{
-      document.querySelectorAll('.vbtn').forEach(x=>x.classList.remove('sel'));
-      btn.classList.add('sel'); selectedDJ=dj;
-      document.getElementById('v-submit').disabled=false;
-    };
-    opts.appendChild(btn);
-  });
-  document.getElementById('v-submit').disabled=true;
-  show('vote');
+function buildBattleCard(b){
+  const votes=b.votes||{};
+  const total=Object.keys(votes).length;
+  const voted=votes[getVoterKey()];
+  const canVote=b.status==='live'&&!voted;
+  // Results only visible after battle closes — no live tallies during voting
+  const canRes=b.status==='closed';
+  const isExpanded=expandedVote===b.id;
+
+  const pill=b.status==='live'?'<span class="pill pill-live">Live</span>'
+            :b.status==='closed'?'<span class="pill pill-closed">Closed</span>'
+            :'<span class="pill pill-wait">Soon</span>';
+  const winRow=b.winner?`<div class="winner-row">🏆 Winner: ${b.winner}</div>`:'';
+
+  // Hide tally while live — reveal only after closed
+  let metaLine='';
+  if(b.status==='live') metaLine=voted?'You voted — results revealed when voting closes.':'Voting is open!';
+  else if(b.status==='closed') metaLine=total+' vote'+(total!==1?'s':'')+' cast';
+
+  const div=document.createElement('div');
+  div.className='card'+(b.status==='live'?' live':'');
+  div.id='card-'+b.id;
+
+  // Header
+  div.innerHTML=`
+    <div class="card-top"><span class="rtag">${b.label}</span>${pill}</div>
+    <div class="djs">
+      <div class="djn">${b.dj1||'?'}</div>
+      <div class="vsbadge">VS</div>
+      <div class="djn">${b.dj2||'?'}</div>
+    </div>
+    <div class="meta">${metaLine}</div>
+    ${winRow}`;
+
+  // Inline vote panel
+  if(canVote && isExpanded){
+    const panel=document.createElement('div');
+    panel.className='inline-vote-panel';
+    panel.innerHTML=`<div class="vote-sub" style="margin-bottom:12px">Who brought the heat?</div>`;
+
+    [b.dj1,b.dj2].forEach(dj=>{
+      const btn=document.createElement('button');
+      btn.className='vbtn'+(selectedDJ===dj&&currentBattle&&currentBattle.id===b.id?' sel':'');
+      btn.innerHTML=`<div class="avatar">${ini(dj)}</div><div class="vdjn">${dj}</div>`;
+      btn.onclick=()=>{
+        currentBattle=b;
+        selectedDJ=dj;
+        // Re-render just this card to show selection
+        const old=document.getElementById('card-'+b.id);
+        if(old) old.replaceWith(buildBattleCard(b));
+      };
+      panel.appendChild(btn);
+    });
+
+    const submitRow=document.createElement('div');
+    submitRow.className='row-btns';
+    submitRow.style.marginTop='10px';
+    const submitBtn=document.createElement('button');
+    submitBtn.className='btn btn-acc';
+    submitBtn.disabled=!(selectedDJ&&currentBattle&&currentBattle.id===b.id);
+    submitBtn.textContent='Submit vote';
+    submitBtn.onclick=()=>submitVote(b.id);
+    const cancelBtn=document.createElement('button');
+    cancelBtn.className='btn btn-ghost';
+    cancelBtn.textContent='Cancel';
+    cancelBtn.onclick=()=>{ expandedVote=null; selectedDJ=null; currentBattle=null; const old=document.getElementById('card-'+b.id); if(old) old.replaceWith(buildBattleCard(b)); };
+    submitRow.appendChild(submitBtn);
+    submitRow.appendChild(cancelBtn);
+    panel.appendChild(submitRow);
+    div.appendChild(panel);
+  } else {
+    // Normal action buttons
+    const row=document.createElement('div');
+    row.className='row-btns';
+    if(canVote){
+      const vb=document.createElement('button');
+      vb.className='btn btn-acc';
+      vb.textContent='Vote now';
+      vb.onclick=()=>{ expandedVote=b.id; selectedDJ=null; currentBattle=null; const old=document.getElementById('card-'+b.id); if(old) old.replaceWith(buildBattleCard(b)); };
+      row.appendChild(vb);
+    }
+    if(canRes){
+      const rb=document.createElement('button');
+      rb.className='btn btn-ghost';
+      rb.textContent='Results';
+      rb.onclick=()=>openResults(b.id);
+      row.appendChild(rb);
+    }
+    if(row.children.length) div.appendChild(row);
+  }
+
+  return div;
 }
 
-async function submitVote(){
+// ─── VOTE (inline) ────────────────────────────────────────────────────────
+async function submitVote(battleId){
   if(!selectedDJ||!currentBattle) return;
   const key=getVoterKey();
-  const sb=document.getElementById('v-submit');
-  sb.disabled=true; sb.textContent='Submitting…';
   try{
     const fresh=await fbGet();
     if(!fresh||!fresh.bracket) throw new Error('No data');
-    const b=allBattles(fresh.bracket).find(x=>x.id===currentBattle.id);
+    const b=allBattles(fresh.bracket).find(x=>x.id===battleId);
     if(!b) throw new Error('Battle not found');
     if(!b.votes) b.votes={};
-    if(b.votes[key]){alert('Already voted!');show('home');return;}
+    if(b.votes[key]){alert('Already voted!');expandedVote=null;renderHome();return;}
     b.votes[key]=selectedDJ;
     await fbSet(fresh);
     state=fresh;
-    document.getElementById('thanks-msg').textContent='You voted for '+selectedDJ+'. Results update live.';
-    show('voted');
+    expandedVote=null;
+    selectedDJ=null;
+    currentBattle=null;
+    renderHome();
+    // Show brief thank you toast
+    showToast('🎉 Voted for '+b.votes[key]+'!');
   }catch(e){
     alert('Vote failed: '+e.message);
-    sb.disabled=false; sb.textContent='Submit vote';
   }
+}
+
+function showToast(msg){
+  let t=document.getElementById('toast');
+  if(!t){ t=document.createElement('div'); t.id='toast'; t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#e8a020;color:#0e0c0a;font-weight:700;font-size:14px;padding:10px 20px;border-radius:24px;z-index:99;transition:opacity .4s'; document.body.appendChild(t); }
+  t.textContent=msg; t.style.opacity='1';
+  setTimeout(()=>{ t.style.opacity='0'; },2500);
 }
 
 // ─── RESULTS ──────────────────────────────────────────────────────────────
