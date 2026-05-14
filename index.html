@@ -446,17 +446,17 @@ function buildBattleCard(b){
   const votes=b.votes||{};
   const total=Object.keys(votes).length;
   const voted=votes[getVoterKey()];
-  const canVote=b.status==='live'&&!voted;
+  const canVote=b.status==='live'; // allow vote change while live
   const canRes=b.status==='closed';
   const isLive=b.status==='live';
-  const myPick=currentBattle&&currentBattle.id===b.id?selectedDJ:null;
+  const myPick=currentBattle&&currentBattle.id===b.id?selectedDJ:(voted||null);
 
   const pill=isLive?'<span class="pill pill-live">Live</span>'
             :b.status==='closed'?'<span class="pill pill-closed">Closed</span>'
             :'<span class="pill pill-wait">Soon</span>';
 
   let metaLine='';
-  if(isLive) metaLine=voted?'You voted — results revealed when voting closes.':'Tap a name to vote';
+  if(isLive) metaLine=voted?'Your vote: '+voted+' — tap to change while voting is open':'Tap a name to vote';
   else if(b.status==='closed') metaLine=total+' vote'+(total!==1?'s':'')+' cast';
 
   const div=document.createElement('div');
@@ -528,7 +528,7 @@ function buildBattleCard(b){
     voteBtn.textContent='Vote now';
     voteBtn.disabled=!myPick;
     voteBtn.style.marginTop='10px';
-    voteBtn.onclick=()=>submitVote(b.id);
+    voteBtn.onclick=()=>submitVote(b.id, myPick);
     div.appendChild(voteBtn);
   }
 
@@ -547,25 +547,25 @@ function buildBattleCard(b){
 
 
 // ─── VOTE (inline) ────────────────────────────────────────────────────────
-async function submitVote(battleId){
-  if(!selectedDJ||!currentBattle) return;
+async function submitVote(battleId, djChoice){
+  // Accept djChoice as direct param so it's not lost if globals cleared
+  const pick = djChoice || selectedDJ;
+  if(!pick) return;
   const key=getVoterKey();
   try{
     const fresh=await fbGet();
     if(!fresh||!fresh.bracket) throw new Error('No data');
     const b=allBattles(fresh.bracket).find(x=>x.id===battleId);
     if(!b) throw new Error('Battle not found');
+    if(b.status!=='live'){alert('Voting is closed.');renderHome();return;}
     if(!b.votes) b.votes={};
-    if(b.votes[key]){alert('Already voted!');expandedVote=null;renderHome();return;}
-    b.votes[key]=selectedDJ;
+    b.votes[key]=pick;
     await fbSet(fresh);
     state=fresh;
-    expandedVote=null;
     selectedDJ=null;
     currentBattle=null;
     renderHome();
-    // Show brief thank you toast
-    showToast('🎉 Voted for '+b.votes[key]+'!');
+    showToast('🎉 Voted for '+pick+'!');
   }catch(e){
     alert('Vote failed: '+e.message);
   }
