@@ -233,6 +233,10 @@ hr{border:none;border-top:1px solid var(--border);margin:16px 0}
     </div>
 
     <!-- Settings -->
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px">
+      <span style="font-size:13px;color:var(--muted)">Refresh to see latest data</span>
+      <button class="btn btn-ghost" style="flex:none;padding:8px 16px;font-size:13px" onclick="manualRefreshAdmin()">↻ Refresh</button>
+    </div>
     <div class="card">
       <div class="sec">Change PIN</div>
       <div style="display:flex;gap:8px">
@@ -362,6 +366,9 @@ function setStatus(msg,err){
 function startPoll(){
   if(pollTimer) clearInterval(pollTimer);
   pollTimer=setInterval(async()=>{
+    // Never poll while admin panel is open — it would wipe unsaved DJ name inputs
+    const active=document.querySelector('.screen.active');
+    if(active&&active.id==='s-admin') return;
     try{
       const d=await fbGet();
       if(d&&d.pin){ state=d; syncUI(); }
@@ -377,7 +384,7 @@ function syncUI(){
     const b=allBattles(state.bracket||{rounds:[]}).find(x=>x.id===currentBattle.id);
     if(b){currentBattle=b;renderResultsScreen(b);}
   }
-  if(active.id==='s-admin'&&adminUnlocked) renderAdminBody();
+  // Admin screen intentionally excluded — poll is paused there
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────
@@ -540,6 +547,8 @@ function goAdmin(){
   document.getElementById('pin-err').style.display='none';
   document.getElementById('pin-in').value='';
   show('admin');
+  // Fetch latest state once when opening admin, then stop polling
+  fbGet().then(d=>{ if(d&&d.pin) state=d; }).catch(()=>{});
 }
 
 function checkPin(){
@@ -884,6 +893,13 @@ async function declareWinner(id,dj){
     renderNamesCard(); // unlock next round if ready
     renderCtrlCard();
   }
+}
+
+async function manualRefreshAdmin(){
+  try{
+    const d=await fbGet();
+    if(d&&d.pin){ state=d; renderAdminBody(); }
+  }catch(e){ alert('Refresh failed: '+e.message); }
 }
 
 async function changePin(){
